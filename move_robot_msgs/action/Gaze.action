@@ -1,0 +1,11 @@
+#goal definition
+geometry_msgs/PointStamped fixation_point
+---
+#result definition
+bool state_reached
+---
+#feedback
+geometry_msgs/PointStamped fixation_point
+float64[] joint_states
+float64[] spherical_angles
+
