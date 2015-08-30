@@ -3,6 +3,6 @@
 <launch>
 	<node name="gaze" pkg="move_robot" type="gaze_sim" respawn="false" output="screen">
  		<rosparam command="load" file="$(find vizzy_moveit_config)/config/kinematics.yaml"/>
- 		<rosparam command="load" file="$(find foveated_stereo_ros)/config/params.yaml"/>
+ 		<rosparam command="load" file="$(find foveated_stereo_ros)/config/frames.yaml"/>
 	</node>
 </launch>

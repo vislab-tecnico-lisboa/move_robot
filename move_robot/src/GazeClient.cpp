@@ -16,10 +16,10 @@ int main (int argc, char **argv)
     ROS_INFO("Action server started, sending goal.");
     // send a goal to the action
     move_robot_msgs::GazeGoal goal;
-    goal.fixation_point.point.x = 0.0;
-    goal.fixation_point.point.y = 0.0;
-    goal.fixation_point.point.z = 0.3;
-
+    goal.fixation_point.point.x = 0.4;
+    goal.fixation_point.point.y = -0.2;
+    goal.fixation_point.point.z = 0.5;
+    goal.fixation_point.header.frame_id="ego_frame";
     ac.sendGoal(goal);
 
     //wait for the action to return
