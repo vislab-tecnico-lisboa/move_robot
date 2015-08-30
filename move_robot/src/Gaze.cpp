@@ -89,9 +89,9 @@ void Gaze::publishFixationPoint(const move_robot_msgs::GazeGoalConstPtr &goal, b
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-    marker.scale.x = 0.01;
-    marker.scale.y = 0.01;
-    marker.scale.z = 0.01;
+    marker.scale.x = 0.05;
+    marker.scale.y = 0.05;
+    marker.scale.z = 0.05;
     marker.color.a = 1.0; // Don't forget to set the alpha!
     if(valid)
     {
@@ -113,6 +113,7 @@ void Gaze::publishFixationPoint(const move_robot_msgs::GazeGoalConstPtr &goal, b
 
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 {
+    ROS_INFO("YA");
     std_msgs::Float64 neck_pan_angle;
     std_msgs::Float64 neck_tilt_angle;
     std_msgs::Float64 vergence_angle;
@@ -185,6 +186,8 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 
 void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
 {
+    ROS_INFO("YO");
+
     ros::WallTime start_time = ros::WallTime::now();
 
     // helper variables
@@ -220,15 +223,17 @@ void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
         {
             publishFixationPoint(goal,true);
             result_.state_reached=true;
+            ROS_INFO("%s: Succeeded", action_name_.c_str());
+            as_.setSucceeded(result_);
         }
         else
         {
             publishFixationPoint(goal,false);
             result_.state_reached=false;
+            ROS_INFO("%s: Aborted", action_name_.c_str());
+            as_.setAborted(result_);
         }
-        ROS_INFO("%s: Succeeded", action_name_.c_str());
         // set the action state to succeeded
-        as_.setSucceeded(result_);
     }
 
     ros::WallTime total_time = ros::WallTime::now();
