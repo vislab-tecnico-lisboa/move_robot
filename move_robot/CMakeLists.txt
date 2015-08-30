@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   image_transport
   pcl_ros
-  rviz_visual_tools
   tf_conversions
   message_generation
   nodelet
