@@ -113,7 +113,6 @@ void Gaze::publishFixationPoint(const move_robot_msgs::GazeGoalConstPtr &goal, b
 
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 {
-    ROS_INFO("YA");
     std_msgs::Float64 neck_pan_angle;
     std_msgs::Float64 neck_tilt_angle;
     std_msgs::Float64 vergence_angle;
@@ -160,24 +159,74 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     head_joint_values[0] = neck_pan_angle.data;
     head_joint_values[1] = neck_tilt_angle.data;
     head_joint_values[2] = 0;
-    if(!head_group->setJointValueTarget(head_joint_values))
-    {
-        ROS_WARN("Fixation point out of head working space!");
-        return false;
-    }
-    ROS_INFO("Going to move eyes...");
-    head_group->move();
-    ROS_INFO("Done.");
 
     eyes_joint_values[0] = vergence_angle.data;
     eyes_joint_values[1] = 0;
-    if(!eyes_group->setJointValueTarget(eyes_joint_values))
+
+    if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values))
     {
-        ROS_WARN("Fixation point out of eyes working space!");
-        return false;
+        Eigen::Vector3d fixation_point_perturb;
+
+        do
+        {
+            ROS_WARN("Fixation point out of head working space!");
+
+            cv::Mat aux(1, 1, CV_64F);
+
+            // Generate random patch on the sphere surface
+            cv::randn(aux, 0, 0.1);
+            fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
+
+            cv::randn(aux, 0, 0.1);
+            fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
+
+            cv::randn(aux, 0, 0.1);
+            fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
+
+            Eigen::Vector3d fixation_point_perturb_normalized=fixation_point_perturb.normalized();
+
+            if(fixation_point_perturb_normalized.x()!=fixation_point_perturb_normalized.x())
+            {
+                neck_pan_angle.data=0.0;
+                neck_tilt_angle.data=0.0;
+                vergence_angle.data=0.0;
+            }
+            else
+            {
+                neck_pan_angle.data=atan2(fixation_point.x(),fixation_point.z());;
+                neck_tilt_angle.data=-atan2(fixation_point.y()+y_offset,sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.z()*fixation_point.z())));
+                vergence_angle.data=M_PI/2.0-atan2(fixation_point.norm()+z_offset,half_base_line);
+            }
+
+            head_joint_values[0] = neck_pan_angle.data;
+            head_joint_values[1] = neck_tilt_angle.data;
+            head_joint_values[2] = 0;
+
+            eyes_joint_values[0] = vergence_angle.data;
+            eyes_joint_values[1] = 0;
+        }
+        while(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values));
+        ROS_INFO("Found good fixation point!");
+
+        result_.fixation_point.header.frame_id=goal.header.frame_id;
+        result_.fixation_point.header.stamp=ros::Time::now();
+        result_.fixation_point.point.x=fixation_point_perturb.x();
+        result_.fixation_point.point.y=fixation_point_perturb.y();
+        result_.fixation_point.point.z=fixation_point_perturb.z();
     }
+    else
+    {
+        result_.fixation_point=goal;
+        result_.fixation_point.header.stamp=ros::Time::now();
+    }
+
     ROS_INFO("Going to move eyes...");
     eyes_group->move();
+    ROS_INFO("Done.");
+
+
+    ROS_INFO("Going to move head...");
+    head_group->move();
     ROS_INFO("Done.");
 
     return true;
@@ -186,7 +235,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 
 void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
 {
-    ROS_INFO("YO");
+    ROS_INFO_STREAM(action_name_.c_str()<<": Received the following goal: "<<*goal);
 
     ros::WallTime start_time = ros::WallTime::now();
 
@@ -230,6 +279,7 @@ void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
         {
             publishFixationPoint(goal,false);
             result_.state_reached=false;
+
             ROS_INFO("%s: Aborted", action_name_.c_str());
             as_.setAborted(result_);
         }

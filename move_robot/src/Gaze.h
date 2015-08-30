@@ -27,6 +27,11 @@
 #include <tf/transform_listener.h>
 
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+
 class Gaze
 {
     double y_offset;

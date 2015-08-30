@@ -3,6 +3,7 @@ geometry_msgs/PointStamped fixation_point
 ---
 #result definition
 bool state_reached
+geometry_msgs/PointStamped fixation_point
 ---
 #feedback
 geometry_msgs/PointStamped fixation_point
