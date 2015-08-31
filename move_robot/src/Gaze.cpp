@@ -22,8 +22,8 @@ Gaze::Gaze(const std::string & name) :
     eyes_joint_values.resize(eyes_joint_names.size());
     std::cout << eyes_joint_names[0] << " " << eyes_joint_names[1] << std::endl;
 
-    state_monitor=boost::shared_ptr<planning_scene_monitor::CurrentStateMonitor>(new planning_scene_monitor::CurrentStateMonitor(robot_model,tf_listener));
-    state_monitor->startStateMonitor("/vizzy/joint_states");
+    //state_monitor=boost::shared_ptr<planning_scene_monitor::CurrentStateMonitor>(new planning_scene_monitor::CurrentStateMonitor(robot_model,tf_listener));
+    //state_monitor->startStateMonitor("/vizzy/joint_states");
 
     private_node_handle.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
     private_node_handle.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
@@ -73,18 +73,18 @@ Gaze::Gaze(const std::string & name) :
     as_.start();
 }
 
-void Gaze::publishFixationPoint(const move_robot_msgs::GazeGoalConstPtr &goal, bool valid)
+void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string & frame_id, const bool valid)
 {
     visualization_msgs::Marker marker;
-    marker.header=goal->fixation_point.header;
+    marker.header.frame_id=frame_id;
     marker.header.stamp = ros::Time();
     marker.ns = "fixation_point";
     marker.id = 0;
     marker.type = visualization_msgs::Marker::SPHERE;
     marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = goal->fixation_point.point.x;
-    marker.pose.position.y = goal->fixation_point.point.y;
-    marker.pose.position.z = goal->fixation_point.point.z;
+    marker.pose.position.x = goal.x();
+    marker.pose.position.y = goal.y();
+    marker.pose.position.z = goal.z();
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
@@ -166,23 +166,26 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values))
     {
         Eigen::Vector3d fixation_point_perturb;
+        ROS_WARN("Fixation point out of head working space!");
+        publishFixationPoint(fixation_point,goal.header.frame_id,false);
 
         do
         {
-            ROS_WARN("Fixation point out of head working space!");
+            publishFixationPoint(fixation_point_perturb,goal.header.frame_id,false);
 
             cv::Mat aux(1, 1, CV_64F);
 
             // Generate random patch on the sphere surface
-            cv::randn(aux, 0, 0.1);
+            /*cv::randn(aux, 0, 0.1);
             fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
 
             cv::randn(aux, 0, 0.1);
             fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
 
             cv::randn(aux, 0, 0.1);
-            fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
-
+            fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);*/
+            cv::randn(aux, 0, 0.1);
+            fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
             Eigen::Vector3d fixation_point_perturb_normalized=fixation_point_perturb.normalized();
 
             if(fixation_point_perturb_normalized.x()!=fixation_point_perturb_normalized.x())
@@ -205,19 +208,23 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
             eyes_joint_values[0] = vergence_angle.data;
             eyes_joint_values[1] = 0;
         }
-        while(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values));
-        ROS_INFO("Found good fixation point!");
+        while(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values)&&nh_.ok());
+        ROS_WARN("Found good fixation point!");
+        publishFixationPoint(fixation_point_perturb,goal.header.frame_id,true);
 
         result_.fixation_point.header.frame_id=goal.header.frame_id;
         result_.fixation_point.header.stamp=ros::Time::now();
         result_.fixation_point.point.x=fixation_point_perturb.x();
         result_.fixation_point.point.y=fixation_point_perturb.y();
         result_.fixation_point.point.z=fixation_point_perturb.z();
+
     }
     else
     {
         result_.fixation_point=goal;
         result_.fixation_point.header.stamp=ros::Time::now();
+        publishFixationPoint(fixation_point,goal.header.frame_id,true);
+
     }
 
     ROS_INFO("Going to move eyes...");
@@ -270,14 +277,12 @@ void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
 
         if(move(goal_point))
         {
-            publishFixationPoint(goal,true);
             result_.state_reached=true;
             ROS_INFO("%s: Succeeded", action_name_.c_str());
             as_.setSucceeded(result_);
         }
         else
         {
-            publishFixationPoint(goal,false);
             result_.state_reached=false;
 
             ROS_INFO("%s: Aborted", action_name_.c_str());

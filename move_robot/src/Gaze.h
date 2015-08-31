@@ -1,24 +1,22 @@
 #ifndef GAZE_H
 #define GAZE_H
+// MoveIt!
 #include <moveit_msgs/GetPositionIK.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/robot_state/robot_state.h>
-// MoveIt!
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit_msgs/DisplayTrajectory.h>
 #include <moveit_msgs/PlanningScene.h>
-
 #include <moveit/move_group_interface/move_group.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-
 #include <moveit_msgs/DisplayRobotState.h>
 #include <moveit_msgs/DisplayTrajectory.h>
-
 #include <moveit_msgs/AttachedCollisionObject.h>
 #include <moveit_msgs/CollisionObject.h>
+
 #include <std_msgs/Float64.h>
 
 #include <ros/ros.h>
@@ -41,8 +39,7 @@ class Gaze
     std::string right_eye_frame;
     std::string eyes_center_frame;
     std::string ego_frame;
-    moveit::core::RobotStatePtr kinematic_state;
-    void publishFixationPoint(const move_robot_msgs::GazeGoalConstPtr &goal, bool valid);
+    void publishFixationPoint(const Eigen::Vector3d &goal, const std::string & frame_id, const bool valid);
 
 protected:
     double distance_ego_eyes;
@@ -61,6 +58,8 @@ protected:
 
     ros::Publisher fixation_point_marker_pub;
     ros::Publisher gaze_arrow_marker_pub;
+
+    moveit::core::RobotStatePtr kinematic_state;
 
     robot_model_loader::RobotModelLoader robot_model_loader;//("robot_description");
     moveit::core::RobotModelPtr robot_model;// = robot_model_loader.getModel();
