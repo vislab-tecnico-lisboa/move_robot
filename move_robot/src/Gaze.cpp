@@ -176,16 +176,16 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
             cv::Mat aux(1, 1, CV_64F);
 
             // Generate random patch on the sphere surface
-            /*cv::randn(aux, 0, 0.1);
+            cv::randn(aux, 0, 0.1);
             fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
 
             cv::randn(aux, 0, 0.1);
             fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
 
             cv::randn(aux, 0, 0.1);
-            fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);*/
-            cv::randn(aux, 0, 0.1);
-            fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
+            fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
+            //cv::randn(aux, 0, 0.1);
+            //fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
             Eigen::Vector3d fixation_point_perturb_normalized=fixation_point_perturb.normalized();
 
             if(fixation_point_perturb_normalized.x()!=fixation_point_perturb_normalized.x())
