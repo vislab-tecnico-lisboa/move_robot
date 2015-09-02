@@ -176,13 +176,13 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
             cv::Mat aux(1, 1, CV_64F);
 
             // Generate random patch on the sphere surface
-            cv::randn(aux, 0, 0.1);
+            cv::randn(aux, 0, 0.01);
             fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
 
-            cv::randn(aux, 0, 0.1);
+            cv::randn(aux, 0, 0.01);
             fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
 
-            cv::randn(aux, 0, 0.1);
+            cv::randn(aux, 0, 0.01);
             fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
             //cv::randn(aux, 0, 0.1);
             //fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
@@ -196,9 +196,9 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
             }
             else
             {
-                neck_pan_angle.data=atan2(fixation_point.x(),fixation_point.z());;
-                neck_tilt_angle.data=-atan2(fixation_point.y()+y_offset,sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.z()*fixation_point.z())));
-                vergence_angle.data=M_PI/2.0-atan2(fixation_point.norm()+z_offset,half_base_line);
+                neck_pan_angle.data=atan2(fixation_point_perturb.x(),fixation_point_perturb.z());;
+                neck_tilt_angle.data=-atan2(fixation_point_perturb.y()+y_offset,sqrt((fixation_point_perturb.x()*fixation_point_perturb.x())+(fixation_point_perturb.z()*fixation_point_perturb.z())));
+                vergence_angle.data=M_PI/2.0-atan2(fixation_point_perturb.norm()+z_offset,half_base_line);
             }
 
             head_joint_values[0] = neck_pan_angle.data;
@@ -224,7 +224,6 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         result_.fixation_point=goal;
         result_.fixation_point.header.stamp=ros::Time::now();
         publishFixationPoint(fixation_point,goal.header.frame_id,true);
-
     }
 
     ROS_INFO("Going to move eyes...");
