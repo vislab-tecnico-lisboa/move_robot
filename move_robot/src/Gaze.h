@@ -56,8 +56,7 @@ protected:
     move_robot_msgs::GazeFeedback feedback_;
     move_robot_msgs::GazeResult result_;
 
-    ros::Publisher fixation_point_marker_pub;
-    ros::Publisher gaze_arrow_marker_pub;
+    ros::Publisher fixation_point_goal_pub;
 
     moveit::core::RobotStatePtr kinematic_state;
 

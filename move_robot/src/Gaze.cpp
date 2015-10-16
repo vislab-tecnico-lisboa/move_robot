@@ -33,8 +33,7 @@ Gaze::Gaze(const std::string & name) :
     ROS_INFO("Model frame: %s", robot_model->getModelFrame().c_str());
     //kinematic_state->setToDefaultValues();
 
-    fixation_point_marker_pub = nh_.advertise<visualization_msgs::Marker>("fixation_point", 1);
-    gaze_arrow_marker_pub = nh_.advertise<visualization_msgs::Marker>("gaze_arrow", 1);
+    fixation_point_goal_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal", 1);
 
     ROS_INFO("Going to move head to home position.");
     eyes_group->setNamedTarget("eyes_home");
@@ -77,38 +76,14 @@ void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string &
 {
     visualization_msgs::Marker marker;
     marker.header.frame_id=frame_id;
-    marker.header.stamp = ros::Time();
-    marker.ns = "fixation_point";
-    marker.id = 0;
-    marker.type = visualization_msgs::Marker::SPHERE;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = goal.x();
-    marker.pose.position.y = goal.y();
-    marker.pose.position.z = goal.z();
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = 0.0;
-    marker.pose.orientation.w = 1.0;
-    marker.scale.x = 0.05;
-    marker.scale.y = 0.05;
-    marker.scale.z = 0.05;
-    marker.color.a = 1.0; // Don't forget to set the alpha!
-    if(valid)
-    {
-        marker.color.r = 0.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-    }
-    else
-    {
-        marker.color.r = 1.0;
-        marker.color.g = 0.0;
-        marker.color.b = 0.0;
-    }
+    geometry_msgs::PointStamped fixation_point_msg;
+    fixation_point_msg.header.frame_id=frame_id;
 
-    fixation_point_marker_pub.publish(marker);
-    marker.type = visualization_msgs::Marker::ARROW;
-    gaze_arrow_marker_pub.publish(marker);
+    fixation_point_msg.point.x=goal(0);
+    fixation_point_msg.point.y=goal(1);
+    fixation_point_msg.point.z=goal(2);
+
+    fixation_point_goal_pub.publish(fixation_point_msg);
 }
 
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
@@ -156,6 +131,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         vergence_angle.data=M_PI/2.0-atan2(fixation_point.norm()+z_offset,half_base_line);
     }
 
+    //std::cout << "z_offset:"<<z_offset<< " y_offset:"<< y_offset << std::endl;
     head_joint_values[0] = neck_pan_angle.data;
     head_joint_values[1] = neck_tilt_angle.data;
     head_joint_values[2] = 0;
@@ -203,10 +179,10 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 
             head_joint_values[0] = neck_pan_angle.data;
             head_joint_values[1] = neck_tilt_angle.data;
-            head_joint_values[2] = 0;
+            head_joint_values[2] = 0.0;
 
             eyes_joint_values[0] = vergence_angle.data;
-            eyes_joint_values[1] = 0;
+            eyes_joint_values[1] = 0.0;
         }
         while(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values)&&nh_.ok());
         ROS_WARN("Found good fixation point!");
