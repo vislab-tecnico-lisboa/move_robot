@@ -126,9 +126,14 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     }
     else
     {
-        neck_pan_angle.data=atan2(fixation_point.x(),fixation_point.z());;
+        /*neck_pan_angle.data=atan2(fixation_point.x(),fixation_point.z());;
         neck_tilt_angle.data=-atan2(fixation_point.y()+y_offset,sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.z()*fixation_point.z())));
-        vergence_angle.data=M_PI/2.0-atan2(fixation_point.norm()+z_offset,half_base_line);
+        vergence_angle.data=M_PI/2.0-atan2(fixation_point.norm()+z_offset,half_base_line);*/
+
+        neck_pan_angle.data=atan2(fixation_point.x(),fixation_point.z()); // Good
+        neck_tilt_angle.data=-atan2(fixation_point.y()+y_offset,sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.z()*fixation_point.z())));
+        //neck_tilt_angle.data=acos((fixation_point.y()+y_offset)/sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.y()+y_offset)*(fixation_point.y()+y_offset)+(fixation_point.z()*fixation_point.z())));
+        vergence_angle.data=M_PI/2.0-atan2(sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.y()*fixation_point.y())+(fixation_point.z()+z_offset)*(fixation_point.z()+z_offset)),half_base_line);
     }
 
     //std::cout << "z_offset:"<<z_offset<< " y_offset:"<< y_offset << std::endl;

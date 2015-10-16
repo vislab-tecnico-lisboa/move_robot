@@ -18,8 +18,10 @@ class FixationPointRos
 
     boost::shared_ptr<FixationPoint> fixation_point;
 
-    std::string left_camera_frame;
-    std::string right_camera_frame;
+    std::string left_eye_frame;
+    std::string right_eye_frame;
+
+    double base_line;
 public:
     FixationPointRos(const ros::NodeHandle & nh_, const ros::NodeHandle & nh_priv_);
     void jointStateCallback(const sensor_msgs::JointState::ConstPtr& joint_states_msg);

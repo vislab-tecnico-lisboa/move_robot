@@ -6,11 +6,11 @@ FixationPointRos::FixationPointRos(const ros::NodeHandle & nh_,const ros::NodeHa
     tf_listener(new tf::TransformListener(ros::Duration(5.0)))
 {
 
-    nh_priv.param<std::string>("left_camera_frame", left_camera_frame, "left_camera_frame");
-    nh_priv.param<std::string>("right_camera_frame", right_camera_frame, "right_camera_frame");
+    nh_priv.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
+    nh_priv.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
 
-    ROS_INFO_STREAM("left_camera_frame: "<<left_camera_frame);
-    ROS_INFO_STREAM("right_camera_frame: "<<right_camera_frame);
+    ROS_INFO_STREAM("left_eye_frame: "<<left_eye_frame);
+    ROS_INFO_STREAM("right_eye_frame: "<<right_eye_frame);
 
     tf::StampedTransform transform;
 
@@ -18,8 +18,8 @@ FixationPointRos::FixationPointRos(const ros::NodeHandle & nh_,const ros::NodeHa
     {
         try
         {
-            tf_listener->waitForTransform(right_camera_frame, left_camera_frame, ros::Time(0), ros::Duration(10.0) );
-            tf_listener->lookupTransform(right_camera_frame, left_camera_frame, ros::Time(0), transform);
+            tf_listener->waitForTransform(right_eye_frame, left_eye_frame, ros::Time(0), ros::Duration(10.0) );
+            tf_listener->lookupTransform(right_eye_frame, left_eye_frame, ros::Time(0), transform);
         }
         catch (tf::TransformException &ex)
         {
@@ -57,14 +57,34 @@ void FixationPointRos::jointStateCallback(const sensor_msgs::JointState::ConstPt
         }
     }
 
+    tf::StampedTransform transform;
+
+    while(nh.ok())
+    {
+        try
+        {
+            tf_listener->waitForTransform(right_eye_frame, left_eye_frame, ros::Time(0), ros::Duration(10.0) );
+            tf_listener->lookupTransform(right_eye_frame, left_eye_frame, ros::Time(0), transform);
+        }
+        catch (tf::TransformException &ex)
+        {
+            ROS_WARN("%s",ex.what());
+            continue;
+        }
+        break;
+    }
+    tf::Vector3 origin=transform.getOrigin();
+    base_line=(double)origin.length(); // meters
+
     //ROS_INFO_STREAM("vergence joint:"<< vergence_angle << " version joint:" <<version_angle<< " eyes tilt joint:" <<eyes_tilt_angle);
 
-    double left_eye_angle=version_angle+vergence_angle;
-    double right_eye_angle=version_angle-vergence_angle;
+    double left_eye_angle=version_angle+vergence_angle*0.5;
+    double right_eye_angle=version_angle-vergence_angle*0.5;
 
     Eigen::Vector3d fixation_point_eigen=fixation_point->getFixationPoint(left_eye_angle,
                                                                           right_eye_angle,
-                                                                          eyes_tilt_angle);
+                                                                          eyes_tilt_angle,
+                                                                          base_line);
     geometry_msgs::PointStamped fixation_point_msg;
     fixation_point_msg.header.frame_id="eyes_center_vision_link";
 
