@@ -28,10 +28,10 @@ Gaze::Gaze(const std::string & name) :
     private_node_handle.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
     private_node_handle.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
     private_node_handle.param<std::string>("ego_frame", ego_frame, "ego_frame");
+    private_node_handle.param<std::string>("head_origin_frame", head_origin_frame, "head_origin_frame");
     private_node_handle.param<std::string>("eyes_center_frame", eyes_center_frame, "eyes_center_frame");
 
     ROS_INFO("Model frame: %s", robot_model->getModelFrame().c_str());
-    //kinematic_state->setToDefaultValues();
 
     fixation_point_goal_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal", 1);
 
@@ -44,16 +44,22 @@ Gaze::Gaze(const std::string & name) :
     head_group->move();
     ROS_INFO("Done.");
 
-
     tf::StampedTransform transform;
-
 
     while(nh_.ok())
     {
         try
         {
-            tf_listener->waitForTransform(eyes_center_frame, ego_frame, ros::Time(0), ros::Duration(10.0) );
-            tf_listener->lookupTransform(eyes_center_frame, ego_frame, ros::Time(0), transform);
+            tf_listener->waitForTransform(head_origin_frame, ego_frame, ros::Time(0), ros::Duration(10.0) );
+            tf_listener->lookupTransform(head_origin_frame, ego_frame, ros::Time(0), transform);
+            tf::Vector3 origin;
+            origin=transform.getOrigin();
+            y_offset=origin.getY();
+
+            tf_listener->waitForTransform(eyes_center_frame, head_origin_frame, ros::Time(0), ros::Duration(10.0) );
+            tf_listener->lookupTransform(eyes_center_frame, head_origin_frame, ros::Time(0), transform);
+            origin=transform.getOrigin();
+            z_offset=origin.getZ();
         }
         catch (tf::TransformException &ex)
         {
@@ -63,11 +69,7 @@ Gaze::Gaze(const std::string & name) :
         break;
     }
 
-    tf::Vector3 origin;
 
-    origin=transform.getOrigin();
-    y_offset=origin.getY();
-    z_offset=origin.getZ();
 
     as_.start();
 }
@@ -126,17 +128,12 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     }
     else
     {
-        /*neck_pan_angle.data=atan2(fixation_point.x(),fixation_point.z());;
-        neck_tilt_angle.data=-atan2(fixation_point.y()+y_offset,sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.z()*fixation_point.z())));
-        vergence_angle.data=M_PI/2.0-atan2(fixation_point.norm()+z_offset,half_base_line);*/
-
         neck_pan_angle.data=atan2(fixation_point.x(),fixation_point.z()); // Good
-        neck_tilt_angle.data=-atan2(fixation_point.y()+y_offset,sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.z()*fixation_point.z())));
-        //neck_tilt_angle.data=acos((fixation_point.y()+y_offset)/sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.y()+y_offset)*(fixation_point.y()+y_offset)+(fixation_point.z()*fixation_point.z())));
-        vergence_angle.data=M_PI/2.0-atan2(sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.y()*fixation_point.y())+(fixation_point.z()+z_offset)*(fixation_point.z()+z_offset)),half_base_line);
+        double tilt_angle=-atan2(fixation_point.y()+y_offset,sqrt((fixation_point.x()*fixation_point.x())+(fixation_point.z()*fixation_point.z())));
+        neck_tilt_angle.data=tilt_angle;
+        vergence_angle.data=M_PI-2.0*atan2(fixation_point.norm()+z_offset,half_base_line);
     }
 
-    //std::cout << "z_offset:"<<z_offset<< " y_offset:"<< y_offset << std::endl;
     head_joint_values[0] = neck_pan_angle.data;
     head_joint_values[1] = neck_tilt_angle.data;
     head_joint_values[2] = 0;
@@ -146,11 +143,12 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 
     if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values))
     {
-        Eigen::Vector3d fixation_point_perturb;
         ROS_WARN("Fixation point out of head working space!");
         publishFixationPoint(fixation_point,goal.header.frame_id,false);
 
-        do
+        /*
+         *        Eigen::Vector3d fixation_point_perturb;
+         * do
         {
             publishFixationPoint(fixation_point_perturb,goal.header.frame_id,false);
 
@@ -177,9 +175,10 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
             }
             else
             {
-                neck_pan_angle.data=atan2(fixation_point_perturb.x(),fixation_point_perturb.z());;
-                neck_tilt_angle.data=-atan2(fixation_point_perturb.y()+y_offset,sqrt((fixation_point_perturb.x()*fixation_point_perturb.x())+(fixation_point_perturb.z()*fixation_point_perturb.z())));
-                vergence_angle.data=M_PI/2.0-atan2(fixation_point_perturb.norm()+z_offset,half_base_line);
+                neck_pan_angle.data=atan2(fixation_point_perturb.x(),fixation_point_perturb.z());
+                double tilt_angle=-atan2(fixation_point_perturb.y()+y_offset,sqrt((fixation_point_perturb.x()*fixation_point_perturb.x())+(fixation_point_perturb.z()*fixation_point_perturb.z())));
+                neck_tilt_angle.data=tilt_angle;
+                vergence_angle.data=M_PI-2*atan2(fixation_point_perturb.norm()+sin(tilt_angle)*y_offset+z_offset,half_base_line);
             }
 
             head_joint_values[0] = neck_pan_angle.data;
@@ -197,7 +196,9 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         result_.fixation_point.header.stamp=ros::Time::now();
         result_.fixation_point.point.x=fixation_point_perturb.x();
         result_.fixation_point.point.y=fixation_point_perturb.y();
-        result_.fixation_point.point.z=fixation_point_perturb.z();
+        result_.fixation_point.point.z=fixation_point_perturb.z();*/
+
+        return false;
 
     }
     else
