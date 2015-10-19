@@ -29,9 +29,9 @@ int main (int argc, char **argv)
         double aux=angular_freq*time_instant;
         std::cout << aux << " "<<cos(aux) <<std::endl;
         move_robot_msgs::GazeGoal goal;
-        goal.fixation_point.point.x =  0.4*cos(aux);
+        goal.fixation_point.point.x = 0.2*cos(aux);
         goal.fixation_point.point.y =  0.4*cos(aux);
-        goal.fixation_point.point.z = 0.25*cos(aux)+0.75;
+        goal.fixation_point.point.z = 0.75+0.25*cos(aux);
         //goal.fixation_point.point.z = 0.5;
 
         goal.fixation_point.header.frame_id="ego_frame";
