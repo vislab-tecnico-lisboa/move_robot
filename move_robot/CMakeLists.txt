@@ -59,7 +59,6 @@ add_executable(gaze_client src/GazeClient.cpp)
 target_link_libraries(gaze_client
    ${catkin_LIBRARIES}
 )
-
 ## Declare a cpp library
 add_library(fixation_point_lib
    src/FixationPoint.cpp
@@ -78,6 +77,19 @@ target_link_libraries(fixation_point_node
     fixation_point_lib
 )
 
+
+
+
+
+
+## Declare a cpp executable
+add_executable(ball_follower_node src/BallFollowerRos.cpp)
+
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(ball_follower_node
+   ${catkin_LIBRARIES}
+)
 
 
 
