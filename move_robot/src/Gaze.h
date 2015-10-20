@@ -39,8 +39,8 @@ class Gaze
     std::string right_eye_frame;
     std::string head_origin_frame;
     std::string eyes_center_frame;
+    std::string neck_frame;
 
-    std::string ego_frame;
     void publishFixationPoint(const Eigen::Vector3d &goal, const std::string & frame_id, const bool valid);
 
 protected:

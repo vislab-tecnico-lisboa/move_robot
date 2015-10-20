@@ -27,7 +27,7 @@ Gaze::Gaze(const std::string & name) :
 
     private_node_handle.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
     private_node_handle.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
-    private_node_handle.param<std::string>("ego_frame", ego_frame, "ego_frame");
+    private_node_handle.param<std::string>("neck_frame", neck_frame, "neck_frame");
     private_node_handle.param<std::string>("head_origin_frame", head_origin_frame, "head_origin_frame");
     private_node_handle.param<std::string>("eyes_center_frame", eyes_center_frame, "eyes_center_frame");
 
@@ -50,8 +50,8 @@ Gaze::Gaze(const std::string & name) :
     {
         try
         {
-            tf_listener->waitForTransform(head_origin_frame, ego_frame, ros::Time(0), ros::Duration(10.0) );
-            tf_listener->lookupTransform(head_origin_frame, ego_frame, ros::Time(0), transform);
+            tf_listener->waitForTransform(head_origin_frame, neck_frame, ros::Time(0), ros::Duration(10.0) );
+            tf_listener->lookupTransform(head_origin_frame, neck_frame, ros::Time(0), transform);
             tf::Vector3 origin;
             origin=transform.getOrigin();
             y_offset=origin.getY();
@@ -256,8 +256,8 @@ void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
         {
             try
             {
-                tf_listener->waitForTransform(ego_frame, goal->fixation_point.header.frame_id, ros::Time(0), ros::Duration(10.0) );
-                tf_listener->transformPoint(ego_frame, goal->fixation_point, goal_point);
+                tf_listener->waitForTransform(neck_frame, goal->fixation_point.header.frame_id, ros::Time(0), ros::Duration(10.0) );
+                tf_listener->transformPoint(neck_frame, goal->fixation_point, goal_point);
             }
             catch (tf::TransformException &ex)
             {
