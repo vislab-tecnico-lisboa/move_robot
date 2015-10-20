@@ -37,7 +37,9 @@ class Gaze
 
     std::string left_eye_frame;
     std::string right_eye_frame;
+    std::string head_origin_frame;
     std::string eyes_center_frame;
+
     std::string ego_frame;
     void publishFixationPoint(const Eigen::Vector3d &goal, const std::string & frame_id, const bool valid);
     Eigen::Vector3d perturb(const Eigen::Vector3d & fixation_point,  const double & scale);
@@ -58,8 +60,7 @@ protected:
     move_robot_msgs::GazeFeedback feedback_;
     move_robot_msgs::GazeResult result_;
 
-    ros::Publisher fixation_point_marker_pub;
-    ros::Publisher gaze_arrow_marker_pub;
+    ros::Publisher fixation_point_goal_pub;
 
     moveit::core::RobotStatePtr kinematic_state;
 

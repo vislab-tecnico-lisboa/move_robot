@@ -26,6 +26,9 @@ find_package(catkin REQUIRED COMPONENTS
   move_robot_msgs
 )
 
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES foveated_stereo_ros
@@ -56,11 +59,37 @@ add_executable(gaze_client src/GazeClient.cpp)
 target_link_libraries(gaze_client
    ${catkin_LIBRARIES}
 )
+## Declare a cpp library
+add_library(fixation_point_lib
+   src/FixationPoint.cpp
+)
+
+## Declare a cpp executable
+add_executable(fixation_point_node src/FixationPointRos.cpp)
+
+## Add cmake target dependencies of the executable/library
+## as an example, message headers may need to be generated before nodes
+add_dependencies(fixation_point_node visualize_ball_generate_messages_cpp)
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(fixation_point_node
+   ${catkin_LIBRARIES}
+    fixation_point_lib
+)
+
+
+
+
+
 
 ## Declare a cpp executable
 add_executable(ball_follower_node src/BallFollowerRos.cpp)
+
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(ball_follower_node
    ${catkin_LIBRARIES}
 )
+
+
+
