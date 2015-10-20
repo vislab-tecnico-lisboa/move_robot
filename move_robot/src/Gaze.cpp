@@ -10,7 +10,8 @@ Gaze::Gaze(const std::string & name) :
     head_joint_model_group(robot_model->getJointModelGroup("head")),
     head_group(new moveit::planning_interface::MoveGroup("head")),
     eyes_joint_model_group(robot_model->getJointModelGroup("eyes")),
-    eyes_group(new moveit::planning_interface::MoveGroup("eyes"))
+    eyes_group(new moveit::planning_interface::MoveGroup("eyes")),
+    last_fixation_point(Eigen::Vector3d::Constant(std::numeric_limits<double>::max()))
 {
     nh_.setParam("/move_group/trajectory_execution/execution_duration_monitoring", false);
     nh_.setParam("/move_group/trajectory_execution/allowed_execution_duration_scaling",1000.0);
@@ -111,6 +112,26 @@ void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string &
     gaze_arrow_marker_pub.publish(marker);
 }
 
+Eigen::Vector3d Gaze::perturb(const Eigen::Vector3d & fixation_point, const double & scale)
+{
+    cv::Mat aux(1, 1, CV_64F);
+    Eigen::Vector3d fixation_point_perturb;
+    // Generate random patch on the sphere surface
+    cv::randn(aux, 0, scale);
+    fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
+
+    cv::randn(aux, 0, scale);
+    fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
+
+    cv::randn(aux, 0, scale);
+    fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
+    //cv::randn(aux, 0, 0.1);
+    //fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
+
+    return fixation_point_perturb;
+}
+
+
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 {
     std_msgs::Float64 neck_pan_angle;
@@ -137,6 +158,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     half_base_line=(double)origin.length()/2.0; // meters
 
     Eigen::Vector3d fixation_point;
+ 
 
     fixation_point(0)=goal.point.x;
     fixation_point(1)=goal.point.y;
@@ -163,29 +185,17 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     eyes_joint_values[0] = vergence_angle.data;
     eyes_joint_values[1] = 0;
 
-    if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values))
+    if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values)||(fixation_point-last_fixation_point).norm()<0.0001)
     {
-        Eigen::Vector3d fixation_point_perturb;
         ROS_WARN("Fixation point out of head working space!");
         publishFixationPoint(fixation_point,goal.header.frame_id,false);
-
+        Eigen::Vector3d fixation_point_perturb;
         do
         {
+            fixation_point_perturb=perturb(fixation_point, 0.01);
+
             publishFixationPoint(fixation_point_perturb,goal.header.frame_id,false);
 
-            cv::Mat aux(1, 1, CV_64F);
-
-            // Generate random patch on the sphere surface
-            cv::randn(aux, 0, 0.1);
-            fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
-
-            cv::randn(aux, 0, 0.1);
-            fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
-
-            cv::randn(aux, 0, 0.1);
-            fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
-            //cv::randn(aux, 0, 0.1);
-            //fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
             Eigen::Vector3d fixation_point_perturb_normalized=fixation_point_perturb.normalized();
 
             if(fixation_point_perturb_normalized.x()!=fixation_point_perturb_normalized.x())
@@ -211,7 +221,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         while(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values)&&nh_.ok());
         ROS_WARN("Found good fixation point!");
         publishFixationPoint(fixation_point_perturb,goal.header.frame_id,true);
-
+        last_fixation_point=fixation_point_perturb;
         result_.fixation_point.header.frame_id=goal.header.frame_id;
         result_.fixation_point.header.stamp=ros::Time::now();
         result_.fixation_point.point.x=fixation_point_perturb.x();
@@ -221,6 +231,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     }
     else
     {
+        last_fixation_point=fixation_point;
         result_.fixation_point=goal;
         result_.fixation_point.header.stamp=ros::Time::now();
         publishFixationPoint(fixation_point,goal.header.frame_id,true);
