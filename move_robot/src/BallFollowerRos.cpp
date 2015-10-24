@@ -45,7 +45,7 @@ void BallFollowerRos::ballPositionCallback(const geometry_msgs::PointStampedCons
     goal_msg.target_pose.header.frame_id = navigation_frame;
     goal_msg.target_pose.header.stamp = ros::Time::now();
 
-   // goal_msg.target_pose.pose.orientation.x = q.getX();
+    // goal_msg.target_pose.pose.orientation.x = q.getX();
     //goal_msg.target_pose.pose.orientation.y = q.getY();
     //goal_msg.target_pose.pose.orientation.z = q.getZ();
     //goal_msg.target_pose.pose.orientation.w = q.getW();

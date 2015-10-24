@@ -178,15 +178,10 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     {
         ROS_WARN("Fixation point out of head working space!");
         publishFixationPoint(fixation_point,goal.header.frame_id,false);
-<<<<<<< HEAD
-        Eigen::Vector3d fixation_point_perturb;
-        do
-=======
 
         /*
-         *        Eigen::Vector3d fixation_point_perturb;
-         * do
->>>>>>> 67a97285623f2e1615376470af609288efd64335
+         Eigen::Vector3d fixation_point_perturb;
+         do
         {
             fixation_point_perturb=perturb(fixation_point, 0.01);
 
