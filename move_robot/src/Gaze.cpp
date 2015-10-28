@@ -89,26 +89,6 @@ void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string &
     fixation_point_goal_pub.publish(fixation_point_msg);
 }
 
-Eigen::Vector3d Gaze::perturb(const Eigen::Vector3d & fixation_point, const double & scale)
-{
-    cv::Mat aux(1, 1, CV_64F);
-    Eigen::Vector3d fixation_point_perturb;
-    // Generate random patch on the sphere surface
-    cv::randn(aux, 0, scale);
-    fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
-
-    cv::randn(aux, 0, scale);
-    fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
-
-    cv::randn(aux, 0, scale);
-    fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
-    //cv::randn(aux, 0, 0.1);
-    //fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
-
-    return fixation_point_perturb;
-}
-
-
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 {
     std_msgs::Float64 neck_pan_angle;
@@ -179,49 +159,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         ROS_WARN("Fixation point out of head working space!");
         publishFixationPoint(fixation_point,goal.header.frame_id,false);
 
-        /*
-         Eigen::Vector3d fixation_point_perturb;
-         do
-        {
-            fixation_point_perturb=perturb(fixation_point, 0.01);
-
-            publishFixationPoint(fixation_point_perturb,goal.header.frame_id,false);
-
-            Eigen::Vector3d fixation_point_perturb_normalized=fixation_point_perturb.normalized();
-
-            if(fixation_point_perturb_normalized.x()!=fixation_point_perturb_normalized.x())
-            {
-                neck_pan_angle.data=0.0;
-                neck_tilt_angle.data=0.0;
-                vergence_angle.data=0.0;
-            }
-            else
-            {
-                neck_pan_angle.data=atan2(fixation_point_perturb.x(),fixation_point_perturb.z());
-                double tilt_angle=-atan2(fixation_point_perturb.y()+y_offset,sqrt((fixation_point_perturb.x()*fixation_point_perturb.x())+(fixation_point_perturb.z()*fixation_point_perturb.z())));
-                neck_tilt_angle.data=tilt_angle;
-                vergence_angle.data=M_PI-2*atan2(fixation_point_perturb.norm()+sin(tilt_angle)*y_offset+z_offset,half_base_line);
-            }
-
-            head_joint_values[0] = neck_pan_angle.data;
-            head_joint_values[1] = neck_tilt_angle.data;
-            head_joint_values[2] = 0.0;
-
-            eyes_joint_values[0] = vergence_angle.data;
-            eyes_joint_values[1] = 0.0;
-        }
-        while(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values)&&nh_.ok());
-        ROS_WARN("Found good fixation point!");
-        publishFixationPoint(fixation_point_perturb,goal.header.frame_id,true);
-        last_fixation_point=fixation_point_perturb;
-        result_.fixation_point.header.frame_id=goal.header.frame_id;
-        result_.fixation_point.header.stamp=ros::Time::now();
-        result_.fixation_point.point.x=fixation_point_perturb.x();
-        result_.fixation_point.point.y=fixation_point_perturb.y();
-        result_.fixation_point.point.z=fixation_point_perturb.z();*/
-
         return false;
-
     }
     else
     {
