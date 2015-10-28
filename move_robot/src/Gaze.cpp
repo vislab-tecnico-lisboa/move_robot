@@ -154,7 +154,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     eyes_joint_values[0] = vergence_angle.data;
     eyes_joint_values[1] = 0;
 
-    if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values)||(fixation_point-last_fixation_point).norm()<0.0001)
+    if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values))
     {
         ROS_WARN("Fixation point out of head working space!");
         publishFixationPoint(fixation_point,goal.header.frame_id,false);
@@ -166,19 +166,20 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         last_fixation_point=fixation_point;
         result_.fixation_point=goal;
         result_.fixation_point.header.stamp=ros::Time::now();
+        ROS_INFO("Going to move eyes...");
+        eyes_group->move();
+        ROS_INFO("Done.");
+
+
+        ROS_INFO("Going to move head...");
+        head_group->move();
+        ROS_INFO("Done.");
         publishFixationPoint(fixation_point,goal.header.frame_id,true);
+        return true;
     }
 
-    ROS_INFO("Going to move eyes...");
-    eyes_group->move();
-    ROS_INFO("Done.");
 
 
-    ROS_INFO("Going to move head...");
-    head_group->move();
-    ROS_INFO("Done.");
-
-    return true;
     //state_monitor->getCurrentState()->copyJointGroupPositions(head_joint_model_group, head_joint_values);
 }
 
