@@ -91,6 +91,7 @@ void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string &
 
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 {
+    std::cout << "YAH" << std::endl;
     std_msgs::Float64 neck_pan_angle;
     std_msgs::Float64 neck_tilt_angle;
     std_msgs::Float64 vergence_angle;
@@ -202,6 +203,8 @@ void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
 
     if(success)
     {
+        std::cout << "YAH" << std::endl;
+
         geometry_msgs::PointStamped goal_point;
         while(nh_.ok())
         {
