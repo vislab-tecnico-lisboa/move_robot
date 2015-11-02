@@ -90,10 +90,6 @@ void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string &
     fixation_point_goal_pub.publish(fixation_point_msg);
 }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> a1ce6f613b5574173dd6b2f15caf9ddb43dd0e26
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 {
     std::cout << "YAH" << std::endl;
@@ -206,8 +202,6 @@ void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
 
     if(success)
     {
-        std::cout << "YAH" << std::endl;
-
         geometry_msgs::PointStamped goal_point;
         while(nh_.ok())
         {
