@@ -92,7 +92,6 @@ void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string &
 
 bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 {
-    std::cout << "YAH" << std::endl;
     std_msgs::Float64 neck_pan_angle;
     std_msgs::Float64 neck_tilt_angle;
     std_msgs::Float64 vergence_angle;
