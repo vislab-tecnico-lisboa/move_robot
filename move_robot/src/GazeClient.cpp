@@ -35,6 +35,8 @@ int main (int argc, char **argv)
         //goal.fixation_point.point.z = 0.5;
 
         goal.fixation_point.header.frame_id="ego_frame";
+        goal.fixation_point.header.stamp=ros::Time::now();
+
         ac.sendGoal(goal);
         ROS_INFO("Action server started, sending goal.");
 

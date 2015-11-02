@@ -4,7 +4,7 @@ Gaze::Gaze(const std::string & name) :
     as_(nh_, name, boost::bind(&Gaze::executeCB, this, _1), false),
     private_node_handle("~"),
     action_name_(name),
-    tf_listener(new tf::TransformListener(ros::Duration(2.0))),
+    tf_listener(new tf::TransformListener(ros::Duration(40.0))),
     robot_model_loader("robot_description"),
     robot_model(robot_model_loader.getModel()),
     head_joint_model_group(robot_model->getJointModelGroup("head")),
@@ -31,6 +31,7 @@ Gaze::Gaze(const std::string & name) :
     private_node_handle.param<std::string>("neck_frame", neck_frame, "neck_frame");
     private_node_handle.param<std::string>("head_origin_frame", head_origin_frame, "head_origin_frame");
     private_node_handle.param<std::string>("eyes_center_frame", eyes_center_frame, "eyes_center_frame");
+    private_node_handle.param<std::string>("world_frame", world_frame, "world_frame");
 
     ROS_INFO("Model frame: %s", robot_model->getModelFrame().c_str());
 
@@ -38,11 +39,13 @@ Gaze::Gaze(const std::string & name) :
 
     ROS_INFO("Going to move head to home position.");
     eyes_group->setNamedTarget("eyes_home");
-    eyes_group->move();
+    if(!eyes_group->move())
+        exit(-1);
 
     ROS_INFO("Going to move eyes to home position.");
     head_group->setNamedTarget("head_home");
-    head_group->move();
+    if(!head_group->move())
+        exit(-1);
     ROS_INFO("Done.");
 
     tf::StampedTransform transform;
@@ -70,8 +73,6 @@ Gaze::Gaze(const std::string & name) :
         break;
     }
 
-
-
     as_.start();
 }
 
@@ -87,25 +88,6 @@ void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string &
     fixation_point_msg.point.z=goal(2);
 
     fixation_point_goal_pub.publish(fixation_point_msg);
-}
-
-Eigen::Vector3d Gaze::perturb(const Eigen::Vector3d & fixation_point, const double & scale)
-{
-    cv::Mat aux(1, 1, CV_64F);
-    Eigen::Vector3d fixation_point_perturb;
-    // Generate random patch on the sphere surface
-    cv::randn(aux, 0, scale);
-    fixation_point_perturb(0,0)=fixation_point.x()+aux.at<double>(0,0);
-
-    cv::randn(aux, 0, scale);
-    fixation_point_perturb(1,0)=fixation_point.y()+aux.at<double>(0,0);
-
-    cv::randn(aux, 0, scale);
-    fixation_point_perturb(2,0)=fixation_point.z()+aux.at<double>(0,0);
-    //cv::randn(aux, 0, 0.1);
-    //fixation_point_perturb= fixation_point_normalized*aux.at<double>(0,0)+fixation_point;
-
-    return fixation_point_perturb;
 }
 
 
@@ -136,7 +118,6 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 
     Eigen::Vector3d fixation_point;
  
-
     fixation_point(0)=goal.point.x;
     fixation_point(1)=goal.point.y;
     fixation_point(2)=goal.point.z;
@@ -183,24 +164,23 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     }
     else
     {
+        publishFixationPoint(fixation_point,goal.header.frame_id,true);
+
         last_fixation_point=fixation_point;
         result_.fixation_point=goal;
         result_.fixation_point.header.stamp=ros::Time::now();
         ROS_INFO("Going to move eyes...");
-        eyes_group->move();
+        if(!eyes_group->move())
+            return false;
         ROS_INFO("Done.");
 
 
         ROS_INFO("Going to move head...");
-        head_group->move();
+        if(!head_group->move())
+            return false;
         ROS_INFO("Done.");
-        publishFixationPoint(fixation_point,goal.header.frame_id,true);
         return true;
     }
-
-
-
-    //state_monitor->getCurrentState()->copyJointGroupPositions(head_joint_model_group, head_joint_values);
 }
 
 void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
@@ -227,16 +207,20 @@ void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
         {
             try
             {
-                tf_listener->waitForTransform(neck_frame, goal->fixation_point.header.frame_id, ros::Time(0), ros::Duration(10.0) );
-                tf_listener->transformPoint(neck_frame, goal->fixation_point, goal_point);
+                ROS_INFO("trying");
+                ros::Time current_time = ros::Time::now();
+                tf_listener->waitForTransform(neck_frame, current_time, goal->fixation_point.header.frame_id, goal->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+                tf_listener->transformPoint(neck_frame, current_time, goal->fixation_point, world_frame, goal_point);
             }
             catch (tf::TransformException &ex)
             {
-                //ROS_WARN("%s",ex.what());
+                ROS_INFO("yaicks");
+
                 continue;
             }
             break;
         }
+        ROS_INFO("Vou tentar mexer");
 
         if(move(goal_point))
         {
