@@ -87,6 +87,7 @@ void FixationPointRos::jointStateCallback(const sensor_msgs::JointState::ConstPt
                                                                           base_line);
     geometry_msgs::PointStamped fixation_point_msg;
     fixation_point_msg.header.frame_id="eyes_center_vision_link";
+    fixation_point_msg.header.stamp=ros::Time::now();
 
     fixation_point_msg.point.x=fixation_point_eigen(0);
     fixation_point_msg.point.y=fixation_point_eigen(1);

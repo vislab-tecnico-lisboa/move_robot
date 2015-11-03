@@ -16,8 +16,14 @@
 #include <moveit_msgs/DisplayTrajectory.h>
 #include <moveit_msgs/AttachedCollisionObject.h>
 #include <moveit_msgs/CollisionObject.h>
+#include <moveit_msgs/MoveGroupAction.h>
+#include <moveit_msgs/MoveGroupActionFeedback.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 #include <std_msgs/Float64.h>
+#include <geometry_msgs/PointStamped.h>
 
 #include <ros/ros.h>
 #include <actionlib/server/simple_action_server.h>
@@ -45,6 +51,8 @@ class Gaze
     void publishFixationPoint(const Eigen::Vector3d &goal, const std::string & frame_id, const bool valid);
     Eigen::Vector3d last_fixation_point;
 
+     move_robot_msgs::GazeGoalConstPtr goal;
+     ros::WallTime start_time;
 protected:
     double distance_ego_eyes;
     planning_scene_monitor::CurrentStateMonitorPtr state_monitor;
@@ -67,23 +75,24 @@ protected:
     robot_model_loader::RobotModelLoader robot_model_loader;//("robot_description");
     moveit::core::RobotModelPtr robot_model;// = robot_model_loader.getModel();
 
-    const moveit::core::JointModelGroup* head_joint_model_group;//kinematic_model->getJointModelGroup("head");
-    moveit::planning_interface::MoveGroup* head_group;
+    const moveit::core::JointModelGroup* oculocephalic_joint_model_group;//kinematic_model->getJointModelGroup("head");
+    moveit::planning_interface::MoveGroup* oculocephalic_group;
 
-    const moveit::core::JointModelGroup* eyes_joint_model_group;//kinematic_model->getJointModelGroup("head");
-    moveit::planning_interface::MoveGroup* eyes_group;
+    std::vector<double> oculocephalic_joint_values;
+    std::vector<std::string> oculocephalic_joint_names;
 
-    std::vector<double> head_joint_values;
-    std::vector<std::string> head_joint_names;
+    typedef message_filters::sync_policies::ApproximateTime<geometry_msgs::PointStamped, moveit_msgs::MoveGroupActionFeedback> MySyncPolicy;
+    boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > fixation_point_sub;
+    boost::shared_ptr<message_filters::Subscriber<moveit_msgs::MoveGroupActionFeedback> > move_group_action_feedback_sub;
 
-    std::vector<double> eyes_joint_values;
-    std::vector<std::string> eyes_joint_names;
-
+    boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> >sync;
 public:
     double half_base_line;
     Gaze(const std::string & name);
     bool move(const geometry_msgs::PointStamped  &goal);
-    void executeCB(const move_robot_msgs::GazeGoalConstPtr &goal);
+    void goalCB();
+    void preemptCB();
+    void analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg, const moveit_msgs::MoveGroupActionFeedback::ConstPtr &move_group_action_feedback_msg);
 };
 
 #endif // GAZE_H

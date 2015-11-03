@@ -4,9 +4,10 @@ geometry_msgs/PointStamped fixation_point
 #result definition
 bool state_reached
 geometry_msgs/PointStamped fixation_point
+float64 fixation_point_error
 ---
 #feedback
+bool state_reached
 geometry_msgs/PointStamped fixation_point
+float64 fixation_point_error
 float64[] joint_states
-float64[] spherical_angles
-

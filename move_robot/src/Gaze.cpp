@@ -1,30 +1,27 @@
 #include "Gaze.h"
 
 Gaze::Gaze(const std::string & name) :
-    as_(nh_, name, boost::bind(&Gaze::executeCB, this, _1), false),
+    as_(nh_, name, false),
     private_node_handle("~"),
     action_name_(name),
     tf_listener(new tf::TransformListener(ros::Duration(40.0))),
     robot_model_loader("robot_description"),
     robot_model(robot_model_loader.getModel()),
-    head_joint_model_group(robot_model->getJointModelGroup("head")),
-    head_group(new moveit::planning_interface::MoveGroup("head")),
-    eyes_joint_model_group(robot_model->getJointModelGroup("eyes")),
-    eyes_group(new moveit::planning_interface::MoveGroup("eyes")),
+    oculocephalic_joint_model_group(robot_model->getJointModelGroup("oculocephalic")),
+    oculocephalic_group(new moveit::planning_interface::MoveGroup("oculocephalic")),
+    //eyes_joint_model_group(robot_model->getJointModelGroup("eyes")),
+    //eyes_group(new moveit::planning_interface::MoveGroup("eyes")),
     last_fixation_point(Eigen::Vector3d::Constant(std::numeric_limits<double>::max()))
 {
     nh_.setParam("/move_group/trajectory_execution/execution_duration_monitoring", false);
     nh_.setParam("/move_group/trajectory_execution/allowed_execution_duration_scaling",1000.0);
-    head_joint_names=head_group->getActiveJoints();
-    head_joint_values.resize(head_joint_names.size());
-    std::cout << head_joint_names[0] << " " << head_joint_names[1] << " " << head_joint_names[2] << std::endl;
-
-    eyes_joint_names=eyes_group->getActiveJoints();
-    eyes_joint_values.resize(eyes_joint_names.size());
-    std::cout << eyes_joint_names[0] << " " << eyes_joint_names[1] << std::endl;
-
-    //state_monitor=boost::shared_ptr<planning_scene_monitor::CurrentStateMonitor>(new planning_scene_monitor::CurrentStateMonitor(robot_model,tf_listener));
-    //state_monitor->startStateMonitor("/vizzy/joint_states");
+    oculocephalic_joint_names=oculocephalic_group->getActiveJoints();
+    oculocephalic_joint_values.resize(oculocephalic_joint_names.size());
+    std::cout << oculocephalic_joint_names[0] << " "
+                                              << oculocephalic_joint_names[1] << " "
+                                              << oculocephalic_joint_names[2] << " "
+                                              << oculocephalic_joint_names[3] <<" "
+                                              << oculocephalic_joint_names[4] << std::endl;
 
     private_node_handle.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
     private_node_handle.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
@@ -37,15 +34,9 @@ Gaze::Gaze(const std::string & name) :
 
     fixation_point_goal_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal", 1);
 
-    ROS_INFO("Going to move head to home position.");
-    eyes_group->setNamedTarget("eyes_home");
-    if(!eyes_group->move())
-        exit(-1);
-
-    ROS_INFO("Going to move eyes to home position.");
-    head_group->setNamedTarget("head_home");
-    if(!head_group->move())
-        exit(-1);
+    ROS_INFO("Going to move head and eyes to home position.");
+    oculocephalic_group->setNamedTarget("oculocephalic_home");
+    while(!oculocephalic_group->move()&&nh_.ok());
     ROS_INFO("Done.");
 
     tf::StampedTransform transform;
@@ -72,6 +63,13 @@ Gaze::Gaze(const std::string & name) :
         }
         break;
     }
+    fixation_point_sub=boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > (new message_filters::Subscriber<geometry_msgs::PointStamped>(nh_, "fixation_point", 10));
+    move_group_action_feedback_sub=boost::shared_ptr<message_filters::Subscriber<moveit_msgs::MoveGroupActionFeedback> > (new message_filters::Subscriber<moveit_msgs::MoveGroupActionFeedback>(nh_, "/move_group/feedback", 10));
+    sync=boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> > (new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *fixation_point_sub, *move_group_action_feedback_sub));
+    sync->registerCallback(boost::bind(&Gaze::analysisCB, this, _1, _2));
+
+    as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
+    as_.registerPreemptCallback(boost::bind(&Gaze::preemptCB, this));
 
     as_.start();
 }
@@ -116,7 +114,7 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
     half_base_line=(double)origin.length()/2.0; // meters
 
     Eigen::Vector3d fixation_point;
- 
+
     fixation_point(0)=goal.point.x;
     fixation_point(1)=goal.point.y;
     fixation_point(2)=goal.point.z;
@@ -147,14 +145,14 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         vergence_angle.data=M_PI-2.0*atan2(fixation_point.norm()*cos(asin(y_offset/fixation_point.norm()))+z_offset,half_base_line);
     }
 
-    head_joint_values[0] = neck_pan_angle.data;
-    head_joint_values[1] = neck_tilt_angle.data;
-    head_joint_values[2] = 0;
+    oculocephalic_joint_values[0] = neck_pan_angle.data;
+    oculocephalic_joint_values[1] = neck_tilt_angle.data;
+    oculocephalic_joint_values[2] = 0;
 
-    eyes_joint_values[0] = vergence_angle.data;
-    eyes_joint_values[1] = 0;
+    oculocephalic_joint_values[3] = vergence_angle.data;
+    oculocephalic_joint_values[4] = 0;
 
-    if(!head_group->setJointValueTarget(head_joint_values)||!eyes_group->setJointValueTarget(eyes_joint_values))
+    if(!oculocephalic_group->setJointValueTarget(oculocephalic_joint_values))//||!eyes_group->setJointValueTarget(eyes_joint_values))
     {
         ROS_WARN("Fixation point out of head working space!");
         publishFixationPoint(fixation_point,goal.header.frame_id,false);
@@ -168,79 +166,142 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         last_fixation_point=fixation_point;
         result_.fixation_point=goal;
         result_.fixation_point.header.stamp=ros::Time::now();
-        ROS_INFO("Going to move eyes...");
-        if(!eyes_group->move())
+        ROS_INFO("Going to move head and eyes...");
+        if(!oculocephalic_group->asyncMove())
             return false;
         ROS_INFO("Done.");
 
 
-        ROS_INFO("Going to move head...");
-        if(!head_group->move())
-            return false;
-        ROS_INFO("Done.");
+        //ROS_INFO("Going to move head...");
+        //if(!head_group->move())
+        //    return false;
+        //ROS_INFO("Done.");
         return true;
     }
 }
 
-void Gaze::executeCB(const move_robot_msgs::GazeGoalConstPtr &goal)
+void Gaze::preemptCB()
 {
+    ROS_INFO("%s: Preempted", action_name_.c_str());
+    // set the action state to preempted
+    as_.setPreempted();
+}
+
+void Gaze::goalCB()
+{
+    goal = as_.acceptNewGoal();
     ROS_INFO_STREAM(action_name_.c_str()<<": Received the following goal: "<<*goal);
 
-    ros::WallTime start_time = ros::WallTime::now();
+    start_time = ros::WallTime::now();
 
-    // helper variables
-    bool success = true;
+    // Convert to neck frame for convenience
+    geometry_msgs::PointStamped goal_point;
+    while(nh_.ok())
+    {
+        try
+        {
+            ros::Time current_time = ros::Time::now();
+            tf_listener->waitForTransform(neck_frame, current_time, goal->fixation_point.header.frame_id, goal->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(neck_frame, current_time, goal->fixation_point, world_frame, goal_point);
+        }
+        catch (tf::TransformException &ex)
+        {
+            continue;
+        }
+        break;
+    }
 
-
-    if (as_.isPreemptRequested() || !ros::ok())
+    if(!move(goal_point))
     {
         result_.state_reached=false;
-        as_.setPreempted();
-        success=false;
+
+        ROS_INFO("%s: Aborted", action_name_.c_str());
+        as_.setAborted(result_);
     }
+    // set the action state to succeeded
 
-    if(success)
-    {
-        geometry_msgs::PointStamped goal_point;
-        while(nh_.ok())
-        {
-            try
-            {
-                ROS_INFO("trying");
-                ros::Time current_time = ros::Time::now();
-                tf_listener->waitForTransform(neck_frame, current_time, goal->fixation_point.header.frame_id, goal->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-                tf_listener->transformPoint(neck_frame, current_time, goal->fixation_point, world_frame, goal_point);
-            }
-            catch (tf::TransformException &ex)
-            {
-                ROS_INFO("yaicks");
 
-                continue;
-            }
-            break;
-        }
-        ROS_INFO("Vou tentar mexer");
 
-        if(move(goal_point))
-        {
-            result_.state_reached=true;
-            ROS_INFO("%s: Succeeded", action_name_.c_str());
-            as_.setSucceeded(result_);
-        }
-        else
-        {
-            result_.state_reached=false;
-
-            ROS_INFO("%s: Aborted", action_name_.c_str());
-            as_.setAborted(result_);
-        }
-        // set the action state to succeeded
-    }
-
-    ros::WallTime total_time = ros::WallTime::now();
-
-    ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
 
     return;
 }
 
+void Gaze::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg, const moveit_msgs::MoveGroupActionFeedback::ConstPtr &move_group_action_feedback_msg)
+{
+
+    // Convert points to world frame
+    geometry_msgs::PointStamped fixation_point_;
+    geometry_msgs::PointStamped goal_point_;
+
+    while(nh_.ok())
+    {
+        try
+        {
+            ros::Time current_time = ros::Time::now();
+            tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
+            tf_listener->waitForTransform(world_frame, current_time, goal->fixation_point.header.frame_id, goal->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, goal->fixation_point, world_frame, goal_point_);
+        }
+        catch (tf::TransformException &ex)
+        {
+            continue;
+        }
+        break;
+    }
+
+    double error_x=fixation_point_.point.x-goal_point_.point.x;
+    double error_y=fixation_point_.point.y-goal_point_.point.y;
+    double error_z=fixation_point_.point.z-goal_point_.point.z;
+    double error=sqrt(error_x*error_x+error_y*error_y+error_z*error_z);
+    feedback_.state_reached=false;
+    feedback_.fixation_point=fixation_point_;
+    feedback_.fixation_point_error=error;
+
+    if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::SUCCEEDED)
+    {
+        result_.state_reached=true;
+        result_.fixation_point=fixation_point_;
+        result_.fixation_point_error=error;
+        feedback_.state_reached=true;
+
+        ROS_INFO("%s: Succeeded", action_name_.c_str());
+        as_.setSucceeded(result_);
+
+        ros::WallTime total_time = ros::WallTime::now();
+        ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
+    }
+    else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::ABORTED)
+    {
+        result_.state_reached=false;
+        result_.fixation_point=fixation_point_;
+        result_.fixation_point_error=error;
+
+        ROS_WARN("%s: Aborted", action_name_.c_str());
+        as_.setAborted(result_);
+
+        ros::WallTime total_time = ros::WallTime::now();
+        ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
+    }
+    else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::PREEMPTED)
+    {
+        result_.state_reached=false;
+        result_.fixation_point=*fixation_point_msg;
+        result_.fixation_point_error=error;
+
+        ROS_WARN("%s: Preempted", action_name_.c_str());
+        as_.setPreempted(result_);
+
+        ros::WallTime total_time = ros::WallTime::now();
+        ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
+    }
+    else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::PENDING)
+    {
+        ROS_WARN("%s: Pending", action_name_.c_str());
+    }
+    /*else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::ACTIVE)
+    {
+        ROS_INFO("%s: Active", action_name_.c_str());
+    }*/
+    as_.publishFeedback(feedback_);
+}

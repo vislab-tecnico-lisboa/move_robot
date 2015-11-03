@@ -6,7 +6,7 @@
  		<rosparam command="load" file="$(find foveated_stereo_ros)/config/frames.yaml"/>
 	</node>
 
-  	<node name="gaze_status" pkg="move_robot" type="fixation_point_node" respawn="false" output="screen" >
+  	<node name="gaze_status" pkg="move_robot" type="fixation_point_node" respawn="true" output="screen" >
     		<rosparam file="$(find foveated_stereo_ros)/config/frames.yaml" command="load" />
   	</node>
 </launch>

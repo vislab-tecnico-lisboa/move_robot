@@ -80,16 +80,3 @@ target_link_libraries(fixation_point_node
 
 
 
-
-
-## Declare a cpp executable
-add_executable(ball_follower_node src/BallFollowerRos.cpp)
-
-
-## Specify libraries to link a library or executable target against
-target_link_libraries(ball_follower_node
-   ${catkin_LIBRARIES}
-)
-
-
-
