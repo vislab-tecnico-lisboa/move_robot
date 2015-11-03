@@ -5,23 +5,9 @@ Gaze::Gaze(const std::string & name) :
     private_node_handle("~"),
     action_name_(name),
     tf_listener(new tf::TransformListener(ros::Duration(40.0))),
-    robot_model_loader("robot_description"),
-    robot_model(robot_model_loader.getModel()),
-    oculocephalic_joint_model_group(robot_model->getJointModelGroup("oculocephalic")),
-    oculocephalic_group(new moveit::planning_interface::MoveGroup("oculocephalic")),
-    //eyes_joint_model_group(robot_model->getJointModelGroup("eyes")),
-    //eyes_group(new moveit::planning_interface::MoveGroup("eyes")),
-    last_fixation_point(Eigen::Vector3d::Constant(std::numeric_limits<double>::max()))
+    last_fixation_point(Eigen::Vector3d::Constant(std::numeric_limits<double>::max())),
+    active(false)
 {
-    nh_.setParam("/move_group/trajectory_execution/execution_duration_monitoring", false);
-    nh_.setParam("/move_group/trajectory_execution/allowed_execution_duration_scaling",1000.0);
-    oculocephalic_joint_names=oculocephalic_group->getActiveJoints();
-    oculocephalic_joint_values.resize(oculocephalic_joint_names.size());
-    std::cout << oculocephalic_joint_names[0] << " "
-                                              << oculocephalic_joint_names[1] << " "
-                                              << oculocephalic_joint_names[2] << " "
-                                              << oculocephalic_joint_names[3] <<" "
-                                              << oculocephalic_joint_names[4] << std::endl;
 
     private_node_handle.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
     private_node_handle.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
@@ -30,14 +16,36 @@ Gaze::Gaze(const std::string & name) :
     private_node_handle.param<std::string>("eyes_center_frame", eyes_center_frame, "eyes_center_frame");
     private_node_handle.param<std::string>("world_frame", world_frame, "world_frame");
 
-    ROS_INFO("Model frame: %s", robot_model->getModelFrame().c_str());
-
+    // Publishers
     fixation_point_goal_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal", 1);
+    neck_pan_pub= nh_.advertise<std_msgs::Float64>("/vizzy/neck_pan_position_controller/command", 1);
+    neck_tilt_pub=nh_.advertise<std_msgs::Float64>("/vizzy/neck_tilt_position_controller/command", 1);
+    eyes_tilt_pub=nh_.advertise<std_msgs::Float64>("/vizzy/eyes_tilt_position_controller/command", 1);
+    version_pub=  nh_.advertise<std_msgs::Float64>("/vizzy/version_position_controller/command", 1);
+    vergence_pub= nh_.advertise<std_msgs::Float64>("/vizzy/vergence_position_controller/command", 1);
 
     ROS_INFO("Going to move head and eyes to home position.");
-    oculocephalic_group->setNamedTarget("oculocephalic_home");
-    while(!oculocephalic_group->move()&&nh_.ok());
+
+    std_msgs::Float64 neck_pan_angle;
+    std_msgs::Float64 neck_tilt_angle;
+    std_msgs::Float64 eyes_tilt_angle;
+    std_msgs::Float64 vergence_angle;
+    std_msgs::Float64 version_angle;
+    neck_pan_angle.data=0.0;
+    neck_tilt_angle.data=0.0;
+    eyes_tilt_angle.data=0.0;
+    vergence_angle.data=0.0;
+    version_angle.data=0.0;
+    neck_pan_pub.publish(neck_pan_angle);
+    neck_tilt_pub.publish(neck_tilt_angle);
+    eyes_tilt_pub.publish(eyes_tilt_angle);
+    vergence_pub.publish(vergence_angle);
+    version_pub.publish(version_angle);
+
+    sleep(5.0);
+
     ROS_INFO("Done.");
+
 
     tf::StampedTransform transform;
 
@@ -63,10 +71,23 @@ Gaze::Gaze(const std::string & name) :
         }
         break;
     }
+
+    // Subscribers
+    neck_pan_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/neck_pan_position_controller/state", 10));
+    neck_tilt_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/neck_tilt_position_controller/state", 10));
+    eyes_tilt_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/eyes_tilt_position_controller/state", 10));
+    version_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/version_position_controller/state", 10));
+    vergence_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/vergence_position_controller/state", 10));
     fixation_point_sub=boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > (new message_filters::Subscriber<geometry_msgs::PointStamped>(nh_, "fixation_point", 10));
-    move_group_action_feedback_sub=boost::shared_ptr<message_filters::Subscriber<moveit_msgs::MoveGroupActionFeedback> > (new message_filters::Subscriber<moveit_msgs::MoveGroupActionFeedback>(nh_, "/move_group/feedback", 10));
-    sync=boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> > (new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10), *fixation_point_sub, *move_group_action_feedback_sub));
-    sync->registerCallback(boost::bind(&Gaze::analysisCB, this, _1, _2));
+    sync=boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> > (new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10),
+                                                                                                                          *neck_pan_sub,
+                                                                                                                          *neck_tilt_sub,
+                                                                                                                          *eyes_tilt_sub,
+                                                                                                                          *version_sub,
+                                                                                                                          *vergence_sub,
+                                                                                                                          *fixation_point_sub));
+
+    sync->registerCallback(boost::bind(&Gaze::analysisCB, this, _1, _2, _3, _4, _5, _6));
 
     as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
     as_.registerPreemptCallback(boost::bind(&Gaze::preemptCB, this));
@@ -74,25 +95,18 @@ Gaze::Gaze(const std::string & name) :
     as_.start();
 }
 
-void Gaze::publishFixationPoint(const Eigen::Vector3d &goal, const std::string & frame_id, const bool valid)
+bool Gaze::move(const geometry_msgs::PointStamped  &goal_)
 {
-    visualization_msgs::Marker marker;
-    marker.header.frame_id=frame_id;
-    geometry_msgs::PointStamped fixation_point_msg;
-    fixation_point_msg.header.frame_id=frame_id;
+    ROS_INFO("move");
 
-    fixation_point_msg.point.x=goal(0);
-    fixation_point_msg.point.y=goal(1);
-    fixation_point_msg.point.z=goal(2);
-
-    fixation_point_goal_pub.publish(fixation_point_msg);
-}
-
-bool Gaze::move(const geometry_msgs::PointStamped  &goal)
-{
     std_msgs::Float64 neck_pan_angle;
     std_msgs::Float64 neck_tilt_angle;
+    std_msgs::Float64 eyes_tilt_angle;
     std_msgs::Float64 vergence_angle;
+    std_msgs::Float64 version_angle;
+
+    eyes_tilt_angle.data=0.0;
+    version_angle.data=0.0;
 
     tf::StampedTransform transform;
 
@@ -115,9 +129,9 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
 
     Eigen::Vector3d fixation_point;
 
-    fixation_point(0)=goal.point.x;
-    fixation_point(1)=goal.point.y;
-    fixation_point(2)=goal.point.z;
+    fixation_point(0)=goal_.point.x;
+    fixation_point(1)=goal_.point.y;
+    fixation_point(2)=goal_.point.z;
     Eigen::Vector3d fixation_point_normalized=fixation_point.normalized();
 
     if(fixation_point_normalized.x()!=fixation_point_normalized.x())
@@ -145,39 +159,15 @@ bool Gaze::move(const geometry_msgs::PointStamped  &goal)
         vergence_angle.data=M_PI-2.0*atan2(fixation_point.norm()*cos(asin(y_offset/fixation_point.norm()))+z_offset,half_base_line);
     }
 
-    oculocephalic_joint_values[0] = neck_pan_angle.data;
-    oculocephalic_joint_values[1] = neck_tilt_angle.data;
-    oculocephalic_joint_values[2] = 0;
 
-    oculocephalic_joint_values[3] = vergence_angle.data;
-    oculocephalic_joint_values[4] = 0;
+    neck_pan_pub.publish(neck_pan_angle);
+    neck_tilt_pub.publish(neck_tilt_angle);
+    eyes_tilt_pub.publish(eyes_tilt_angle);
+    vergence_pub.publish(vergence_angle);
+    version_pub.publish(version_angle);
 
-    if(!oculocephalic_group->setJointValueTarget(oculocephalic_joint_values))//||!eyes_group->setJointValueTarget(eyes_joint_values))
-    {
-        ROS_WARN("Fixation point out of head working space!");
-        publishFixationPoint(fixation_point,goal.header.frame_id,false);
+    return true;
 
-        return false;
-    }
-    else
-    {
-        publishFixationPoint(fixation_point,goal.header.frame_id,true);
-
-        last_fixation_point=fixation_point;
-        result_.fixation_point=goal;
-        result_.fixation_point.header.stamp=ros::Time::now();
-        ROS_INFO("Going to move head and eyes...");
-        if(!oculocephalic_group->asyncMove())
-            return false;
-        ROS_INFO("Done.");
-
-
-        //ROS_INFO("Going to move head...");
-        //if(!head_group->move())
-        //    return false;
-        //ROS_INFO("Done.");
-        return true;
-    }
 }
 
 void Gaze::preemptCB()
@@ -189,20 +179,25 @@ void Gaze::preemptCB()
 
 void Gaze::goalCB()
 {
-    goal = as_.acceptNewGoal();
-    ROS_INFO_STREAM(action_name_.c_str()<<": Received the following goal: "<<*goal);
+    goal_msg = as_.acceptNewGoal();
+    ROS_INFO_STREAM(action_name_.c_str()<<": Received the following goal: "<<*goal_msg);
 
     start_time = ros::WallTime::now();
 
     // Convert to neck frame for convenience
     geometry_msgs::PointStamped goal_point;
+    geometry_msgs::PointStamped goal_point_world_viz;
+
     while(nh_.ok())
     {
         try
         {
             ros::Time current_time = ros::Time::now();
-            tf_listener->waitForTransform(neck_frame, current_time, goal->fixation_point.header.frame_id, goal->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-            tf_listener->transformPoint(neck_frame, current_time, goal->fixation_point, world_frame, goal_point);
+            tf_listener->waitForTransform(neck_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(neck_frame, current_time, goal_msg->fixation_point, world_frame, goal_point);
+
+            tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_world_viz);
         }
         catch (tf::TransformException &ex)
         {
@@ -210,6 +205,8 @@ void Gaze::goalCB()
         }
         break;
     }
+
+    fixation_point_goal_pub.publish(goal_point_world_viz);
 
     if(!move(goal_point))
     {
@@ -220,14 +217,19 @@ void Gaze::goalCB()
     }
     // set the action state to succeeded
 
-
-
-
+    active=true;
     return;
 }
 
-void Gaze::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg, const moveit_msgs::MoveGroupActionFeedback::ConstPtr &move_group_action_feedback_msg)
+void Gaze::analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
+                      const control_msgs::JointControllerState::ConstPtr & neck_tilt_msg,
+                      const control_msgs::JointControllerState::ConstPtr & eyes_tilt_msg,
+                      const control_msgs::JointControllerState::ConstPtr & version_msg,
+                      const control_msgs::JointControllerState::ConstPtr & vergence_msg,
+                      const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg)
 {
+    if(!active)
+        return;
 
     // Convert points to world frame
     geometry_msgs::PointStamped fixation_point_;
@@ -240,8 +242,8 @@ void Gaze::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_poin
             ros::Time current_time = ros::Time::now();
             tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
             tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
-            tf_listener->waitForTransform(world_frame, current_time, goal->fixation_point.header.frame_id, goal->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-            tf_listener->transformPoint(world_frame, current_time, goal->fixation_point, world_frame, goal_point_);
+            tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_);
         }
         catch (tf::TransformException &ex)
         {
@@ -258,7 +260,7 @@ void Gaze::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_poin
     feedback_.fixation_point=fixation_point_;
     feedback_.fixation_point_error=error;
 
-    if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::SUCCEEDED)
+    if(error<goal_msg->fixation_point_error_tolerance)
     {
         result_.state_reached=true;
         result_.fixation_point=fixation_point_;
@@ -270,36 +272,9 @@ void Gaze::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_poin
 
         ros::WallTime total_time = ros::WallTime::now();
         ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
+        active=false;
     }
-    else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::ABORTED)
-    {
-        result_.state_reached=false;
-        result_.fixation_point=fixation_point_;
-        result_.fixation_point_error=error;
-
-        ROS_WARN("%s: Aborted", action_name_.c_str());
-        as_.setAborted(result_);
-
-        ros::WallTime total_time = ros::WallTime::now();
-        ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
-    }
-    else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::PREEMPTED)
-    {
-        result_.state_reached=false;
-        result_.fixation_point=*fixation_point_msg;
-        result_.fixation_point_error=error;
-
-        ROS_WARN("%s: Preempted", action_name_.c_str());
-        as_.setPreempted(result_);
-
-        ros::WallTime total_time = ros::WallTime::now();
-        ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
-    }
-    else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::PENDING)
-    {
-        ROS_WARN("%s: Pending", action_name_.c_str());
-    }
-    /*else if(move_group_action_feedback_msg->status.status==actionlib_msgs::GoalStatus::ACTIVE)
+    /*else
     {
         ROS_INFO("%s: Active", action_name_.c_str());
     }*/

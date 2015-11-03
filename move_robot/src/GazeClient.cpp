@@ -32,6 +32,8 @@ int main (int argc, char **argv)
         goal.fixation_point.point.x = 0.2*cos(aux);
         goal.fixation_point.point.y =  0.4*cos(aux);
         goal.fixation_point.point.z = 0.75+0.25*cos(aux);
+        goal.fixation_point_error_tolerance = 0.005;
+
         //goal.fixation_point.point.z = 0.5;
 
         goal.fixation_point.header.frame_id="ego_frame";

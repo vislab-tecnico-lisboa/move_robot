@@ -1,5 +1,6 @@
 #goal definition
 geometry_msgs/PointStamped fixation_point
+float64 fixation_point_error_tolerance  # max allowed error in meters
 ---
 #result definition
 bool state_reached

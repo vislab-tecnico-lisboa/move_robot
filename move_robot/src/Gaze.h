@@ -35,11 +35,14 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include <control_msgs/JointControllerState.h>
 
 class Gaze
 {
+    bool active;
     double y_offset;
     double z_offset;
+    double distance_ego_eyes;
 
     std::string left_eye_frame;
     std::string right_eye_frame;
@@ -48,13 +51,11 @@ class Gaze
     std::string neck_frame;
     std::string world_frame;
 
-    void publishFixationPoint(const Eigen::Vector3d &goal, const std::string & frame_id, const bool valid);
     Eigen::Vector3d last_fixation_point;
 
-     move_robot_msgs::GazeGoalConstPtr goal;
-     ros::WallTime start_time;
+    move_robot_msgs::GazeGoalConstPtr goal_msg;
+    ros::WallTime start_time;
 protected:
-    double distance_ego_eyes;
     planning_scene_monitor::CurrentStateMonitorPtr state_monitor;
     boost::shared_ptr<tf::TransformListener> tf_listener;
 
@@ -68,31 +69,35 @@ protected:
     move_robot_msgs::GazeFeedback feedback_;
     move_robot_msgs::GazeResult result_;
 
+    typedef message_filters::sync_policies::ApproximateTime<control_msgs::JointControllerState, control_msgs::JointControllerState,control_msgs::JointControllerState,control_msgs::JointControllerState,control_msgs::JointControllerState, geometry_msgs::PointStamped> MySyncPolicy;
+    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > neck_pan_sub;
+    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > neck_tilt_sub;
+    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > eyes_tilt_sub;
+    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > version_sub;
+    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > vergence_sub;
+    boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > fixation_point_sub;
+    boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> >sync;
+
+    // Publishers
+    ros::Publisher neck_pan_pub;
+    ros::Publisher neck_tilt_pub;
+    ros::Publisher eyes_tilt_pub;
+    ros::Publisher version_pub;
+    ros::Publisher vergence_pub;
     ros::Publisher fixation_point_goal_pub;
 
-    moveit::core::RobotStatePtr kinematic_state;
-
-    robot_model_loader::RobotModelLoader robot_model_loader;//("robot_description");
-    moveit::core::RobotModelPtr robot_model;// = robot_model_loader.getModel();
-
-    const moveit::core::JointModelGroup* oculocephalic_joint_model_group;//kinematic_model->getJointModelGroup("head");
-    moveit::planning_interface::MoveGroup* oculocephalic_group;
-
-    std::vector<double> oculocephalic_joint_values;
-    std::vector<std::string> oculocephalic_joint_names;
-
-    typedef message_filters::sync_policies::ApproximateTime<geometry_msgs::PointStamped, moveit_msgs::MoveGroupActionFeedback> MySyncPolicy;
-    boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > fixation_point_sub;
-    boost::shared_ptr<message_filters::Subscriber<moveit_msgs::MoveGroupActionFeedback> > move_group_action_feedback_sub;
-
-    boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> >sync;
 public:
     double half_base_line;
     Gaze(const std::string & name);
-    bool move(const geometry_msgs::PointStamped  &goal);
+    bool move(const geometry_msgs::PointStamped  &goal_);
     void goalCB();
     void preemptCB();
-    void analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg, const moveit_msgs::MoveGroupActionFeedback::ConstPtr &move_group_action_feedback_msg);
+    void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
+                    const control_msgs::JointControllerState::ConstPtr & neck_tilt_msg,
+                    const control_msgs::JointControllerState::ConstPtr & eyes_tilt_msg,
+                    const control_msgs::JointControllerState::ConstPtr & version_msg,
+                    const control_msgs::JointControllerState::ConstPtr & vergence_msg,
+                    const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg);
 };
 
 #endif // GAZE_H
