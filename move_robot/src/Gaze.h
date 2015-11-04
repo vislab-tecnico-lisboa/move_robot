@@ -89,7 +89,7 @@ protected:
 public:
     double half_base_line;
     Gaze(const std::string & name);
-    bool move(const geometry_msgs::PointStamped  &goal_);
+    bool moveCartesian();
     void goalCB();
     void preemptCB();
     void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
@@ -98,6 +98,8 @@ public:
                     const control_msgs::JointControllerState::ConstPtr & version_msg,
                     const control_msgs::JointControllerState::ConstPtr & vergence_msg,
                     const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg);
+
+    bool moveHome();
 };
 
 #endif // GAZE_H
