@@ -1,3 +1,6 @@
+// By: Rui P. de Figueiredo : ruifigueiredo@isr.ist.utl.pt
+
+
 #ifndef GAZE_H
 #define GAZE_H
 // MoveIt!
@@ -39,6 +42,9 @@
 
 class Gaze
 {
+
+protected:
+
     bool active;
     double y_offset;
     double z_offset;
@@ -55,7 +61,8 @@ class Gaze
 
     move_robot_msgs::GazeGoalConstPtr goal_msg;
     ros::WallTime start_time;
-protected:
+
+
     planning_scene_monitor::CurrentStateMonitorPtr state_monitor;
     boost::shared_ptr<tf::TransformListener> tf_listener;
 
@@ -84,13 +91,14 @@ protected:
     ros::Publisher eyes_tilt_pub;
     ros::Publisher version_pub;
     ros::Publisher vergence_pub;
-    ros::Publisher fixation_point_goal_pub;
+    ros::Publisher fixation_point_goal_viz_pub;
+    void publishFixationPoint();
 
+    virtual bool moveHome() = 0;
+    virtual bool moveCartesian() = 0;
 public:
     double half_base_line;
     Gaze(const std::string & name);
-    bool moveCartesian();
-    void goalCB();
     void preemptCB();
     void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
                     const control_msgs::JointControllerState::ConstPtr & neck_tilt_msg,
@@ -98,8 +106,7 @@ public:
                     const control_msgs::JointControllerState::ConstPtr & version_msg,
                     const control_msgs::JointControllerState::ConstPtr & vergence_msg,
                     const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg);
-
-    bool moveHome();
+    void goalCB();
 };
 
 #endif // GAZE_H

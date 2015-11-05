@@ -3,6 +3,24 @@
 GazeReal::GazeReal(const std::string & name) : Gaze(name)
 {}
 
+
+// TODO
+bool GazeReal::moveHome()
+{
+
+}
+
+bool GazeReal::moveCartesian()
+{
+
+}
+
+void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg)
+{
+
+}
+
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "gaze");
