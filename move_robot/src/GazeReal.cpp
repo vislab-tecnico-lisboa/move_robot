@@ -48,7 +48,7 @@ GazeReal::GazeReal(const std::string & name) : Gaze(name)
 
     //For now lets just do it for fixation_point_sub.
 
-    fix_point_sub = nh_.subscribe("fixation_point_in", 1, &GazeReal::analysisCB, this);
+    fix_point_sub = nh_.subscribe("fixation_point", 1, &GazeReal::analysisCB, this);
 
 
     as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
@@ -65,6 +65,7 @@ bool GazeReal::moveHome()
 
     //We don't have control of the joints yet. So we need to set a decent initial fixation point by hand.
     //Let's set the point in the base_link frame x=-20, y=0, z=0.959
+    //-20 because base_link has the x axis reversed
 
     //Modo martelanço activado... lol
     geometry_msgs::Point goalToRobot;
