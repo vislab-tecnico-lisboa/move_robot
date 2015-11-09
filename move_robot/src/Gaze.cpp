@@ -10,10 +10,10 @@ Gaze::Gaze(const std::string & name) :
     last_fixation_point(Eigen::Vector3d::Constant(std::numeric_limits<double>::max())),
     active(false)
 {
-
+    fixation_point_goal_viz_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal_viz", 1);
 }
 
-void Gaze::publishFixationPoint()
+void Gaze::publishFixationPointGoal()
 {
     // Convert to neck frame for convenience
     geometry_msgs::PointStamped goal_point_world_viz;
@@ -57,7 +57,7 @@ void Gaze::goalCB()
     }
     else
     {
-        publishFixationPoint();
+        publishFixationPointGoal();
         if(!moveCartesian())
         {
             result_.state_reached=false;

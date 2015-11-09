@@ -8,7 +8,7 @@ class GazeReal : public Gaze
 protected:
     ros::Publisher gazePublisher;
     ros::Subscriber fix_point_sub;
-    std::string base_frame;
+    std::string fixation_point_frame;
 
 public:
     GazeReal(const std::string & name);

@@ -11,7 +11,6 @@ GazeSimulation::GazeSimulation(const std::string & name) : Gaze(name)
     private_node_handle.param<std::string>("world_frame", world_frame, "world_frame");
 
     // Publishers
-    fixation_point_goal_viz_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal", 1);
     neck_pan_pub= nh_.advertise<std_msgs::Float64>("/vizzy/neck_pan_position_controller/command", 1);
     neck_tilt_pub=nh_.advertise<std_msgs::Float64>("/vizzy/neck_tilt_position_controller/command", 1);
     eyes_tilt_pub=nh_.advertise<std_msgs::Float64>("/vizzy/eyes_tilt_position_controller/command", 1);

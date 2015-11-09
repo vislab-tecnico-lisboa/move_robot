@@ -9,18 +9,11 @@ GazeReal::GazeReal(const std::string & name) : Gaze(name)
     private_node_handle.param<std::string>("head_origin_frame", head_origin_frame, "head_origin_frame");
     private_node_handle.param<std::string>("eyes_center_frame", eyes_center_frame, "eyes_center_frame");
     private_node_handle.param<std::string>("world_frame", world_frame, "world_frame");
-    private_node_handle.param<std::string>("base_frame", base_frame, "base_frame");
+    private_node_handle.param<std::string>("fixation_point_frame", fixation_point_frame, "fixation_point_frame");
 
 
     //Publishers
     gazePublisher = nh_.advertise<geometry_msgs::Point>("fixation_point_out", 1);
-
-    //For visualization
-    fixation_point_goal_viz_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal", 1);
-
-    ROS_INFO("Going to move head and eyes to home position.");
-    moveHome();
-
 
     // Subscribers
     /* How do we read joint values on the real one? For now let's leave this commented. Rui and Plinio will teach me how to do this
@@ -50,11 +43,13 @@ GazeReal::GazeReal(const std::string & name) : Gaze(name)
 
     fix_point_sub = nh_.subscribe("fixation_point", 1, &GazeReal::analysisCB, this);
 
-
     as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
     as_.registerPreemptCallback(boost::bind(&Gaze::preemptCB, this));
 
     as_.start();
+
+    ROS_INFO("Going to move head and eyes to home position.");
+    moveHome();
 
 }
 
@@ -76,6 +71,7 @@ bool GazeReal::moveHome()
 
     gazePublisher.publish(goalToRobot);
 
+    ROS_INFO("PUBLISHeD starting");
 
 
 }
@@ -84,19 +80,22 @@ bool GazeReal::moveCartesian()
 {
     //One day we will probably control each joint value here. But now we will just leave the fixation point for the ros-yarp bridge
     //to process
+    ROS_ERROR("ENTREI AQUI");
 
     geometry_msgs::PointStamped goal_point;
     geometry_msgs::Point goalToRobot;
 
 
-    //Ros-yarp bridge receives the point in the neck frame, right? Let's get it in that frame doing another copy/paste from Rui's code
+    //Ros-yarp bridge receives the point in the waist frame, right? Let's get it in that frame doing another copy/paste from Rui's code
+
+    ROS_INFO_STREAM("fixation_point_frame:"<< fixation_point_frame);
     while(nh_.ok())
     {
         try
         {
             ros::Time current_time = ros::Time::now();
-            tf_listener->waitForTransform(neck_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-            tf_listener->transformPoint(neck_frame, current_time, goal_msg->fixation_point, world_frame, goal_point);
+            tf_listener->waitForTransform(fixation_point_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(fixation_point_frame, current_time, goal_msg->fixation_point, world_frame, goal_point);
         }
         catch (tf::TransformException &ex)
         {
@@ -106,6 +105,7 @@ bool GazeReal::moveCartesian()
     }
 
 
+    ROS_INFO_STREAM("fixation_point_frame2:"<< fixation_point_frame);
 
     //Convert it to point, since ros-yarp wont receive a pointStamped
 
@@ -115,6 +115,7 @@ bool GazeReal::moveCartesian()
 
     gazePublisher.publish(goalToRobot);
 
+    return true;
 }
 
 void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg)

@@ -92,7 +92,7 @@ protected:
     ros::Publisher version_pub;
     ros::Publisher vergence_pub;
     ros::Publisher fixation_point_goal_viz_pub;
-    void publishFixationPoint();
+    void publishFixationPointGoal();
 
     virtual bool moveHome() = 0;
     virtual bool moveCartesian() = 0;

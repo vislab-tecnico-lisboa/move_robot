@@ -29,6 +29,7 @@ int main (int argc, char **argv)
         double aux=angular_freq*time_instant;
         std::cout << aux << " "<<cos(aux) <<std::endl;
         move_robot_msgs::GazeGoal goal;
+        goal.type=move_robot_msgs::GazeGoal::CARTESIAN;
         goal.fixation_point.point.x = 0.2*cos(aux);
         goal.fixation_point.point.y =  0.4*cos(aux);
         goal.fixation_point.point.z = 0.75+0.25*cos(aux);
@@ -43,7 +44,7 @@ int main (int argc, char **argv)
         ROS_INFO("Action server started, sending goal.");
 
         //wait for the action to return
-        bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+        bool finished_before_timeout = ac.waitForResult(ros::Duration(1.0));
 
         if (finished_before_timeout)
         {
