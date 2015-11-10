@@ -14,9 +14,10 @@ int main (int argc, char **argv)
     // wait for the action server to start
     ac.waitForServer(); //will wait for infinite time
 
-    double rate=30.0;
+    double rate=10.0;
     ros::Rate r(rate);
 
+double rate_aux=20.0;
 
     // send a goal to the action
     int i=0;
@@ -24,7 +25,7 @@ int main (int argc, char **argv)
     {
         ++i;
 
-        double angular_freq=2*M_PI/rate;
+        double angular_freq=2*M_PI/rate_aux;
         double time_instant=(double)i;
         double aux=angular_freq*time_instant;
         std::cout << aux << " "<<cos(aux) <<std::endl;
@@ -44,15 +45,15 @@ int main (int argc, char **argv)
         ROS_INFO("Action server started, sending goal.");
 
         //wait for the action to return
-        bool finished_before_timeout = ac.waitForResult(ros::Duration(1.0));
+        //bool finished_before_timeout = ac.waitForResult(ros::Duration(1.0));
 
-        if (finished_before_timeout)
+        /*if (finished_before_timeout)
         {
             actionlib::SimpleClientGoalState state = ac.getState();
             ROS_INFO("Action finished: %s",state.toString().c_str());
         }
         else
-            ROS_INFO("Action did not finish before the time out.");
+            ROS_INFO("Action did not finish before the time out.");*/
 
         r.sleep();
 
