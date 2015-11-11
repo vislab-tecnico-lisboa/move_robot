@@ -9,7 +9,7 @@ protected:
     ros::Publisher gazePublisher;
     ros::Subscriber fix_point_sub;
     std::string fixation_point_frame;
-
+    geometry_msgs::PointStamped home_position_fixation_point;
 public:
     GazeReal(const std::string & name);
     bool moveHome();

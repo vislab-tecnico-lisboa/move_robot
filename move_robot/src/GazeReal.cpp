@@ -68,11 +68,10 @@ bool GazeReal::moveHome()
     goalToRobot.y = 0;
     goalToRobot.z = 0.959;
     //Modo martelanço desactivado
-
+    home_position_fixation_point.point=goalToRobot;
+    home_position_fixation_point.header.frame_id=world_frame;
+    home_position_fixation_point.header.stamp=ros::Time::now();
     gazePublisher.publish(goalToRobot);
-
-    ROS_INFO("PUBLISHeD starting");
-
 
 }
 
@@ -80,15 +79,14 @@ bool GazeReal::moveCartesian()
 {
     //One day we will probably control each joint value here. But now we will just leave the fixation point for the ros-yarp bridge
     //to process
-    ROS_ERROR("ENTREI AQUI");
+
 
     geometry_msgs::PointStamped goal_point;
-    geometry_msgs::Point goalToRobot;
+
 
 
     //Ros-yarp bridge receives the point in the waist frame, right? Let's get it in that frame doing another copy/paste from Rui's code
 
-    ROS_INFO_STREAM("fixation_point_frame:"<< fixation_point_frame);
     while(nh_.ok())
     {
         try
@@ -105,10 +103,8 @@ bool GazeReal::moveCartesian()
     }
 
 
-    ROS_INFO_STREAM("fixation_point_frame2:"<< fixation_point_frame);
-
     //Convert it to point, since ros-yarp wont receive a pointStamped
-
+    geometry_msgs::Point goalToRobot;
     goalToRobot.x = goal_point.point.x;
     goalToRobot.y = goal_point.point.y;
     goalToRobot.z = goal_point.point.z;
@@ -140,8 +136,8 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
                 ros::Time current_time = ros::Time::now();
                 tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
                 tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
-                tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-                tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_);
+                tf_listener->waitForTransform(world_frame, current_time, home_position_fixation_point.header.frame_id, home_position_fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+                tf_listener->transformPoint(world_frame, current_time, home_position_fixation_point, world_frame, goal_point_);
             }
             catch (tf::TransformException &ex)
             {

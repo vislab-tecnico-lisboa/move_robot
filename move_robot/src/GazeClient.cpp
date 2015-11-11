@@ -31,14 +31,14 @@ double rate_aux=20.0;
         std::cout << aux << " "<<cos(aux) <<std::endl;
         move_robot_msgs::GazeGoal goal;
         goal.type=move_robot_msgs::GazeGoal::CARTESIAN;
-        goal.fixation_point.point.x = 0.2*cos(aux);
-        goal.fixation_point.point.y =  0.4*cos(aux);
-        goal.fixation_point.point.z = 0.75+0.25*cos(aux);
+        goal.fixation_point.point.x = -0.7;
+        goal.fixation_point.point.y =  0.1*cos(aux);
+        goal.fixation_point.point.z = 0.95;
         goal.fixation_point_error_tolerance = 0.005;
 
         //goal.fixation_point.point.z = 0.5;
 
-        goal.fixation_point.header.frame_id="ego_frame";
+        goal.fixation_point.header.frame_id="base_link";
         goal.fixation_point.header.stamp=ros::Time::now();
 
         ac.sendGoal(goal);
