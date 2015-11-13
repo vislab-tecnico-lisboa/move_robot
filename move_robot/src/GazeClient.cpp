@@ -17,7 +17,7 @@ int main (int argc, char **argv)
     double rate=10.0;
     ros::Rate r(rate);
 
-double rate_aux=20.0;
+double rate_aux=80.0;
 
     // send a goal to the action
     int i=0;
@@ -32,7 +32,7 @@ double rate_aux=20.0;
         move_robot_msgs::GazeGoal goal;
         goal.type=move_robot_msgs::GazeGoal::CARTESIAN;
         goal.fixation_point.point.x = -0.7;
-        goal.fixation_point.point.y =  0.1*cos(aux);
+        goal.fixation_point.point.y =  0.7*cos(aux);
         goal.fixation_point.point.z = 0.95;
         goal.fixation_point_error_tolerance = 0.005;
 
