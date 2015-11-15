@@ -17,28 +17,29 @@ int main (int argc, char **argv)
     double rate=10.0;
     ros::Rate r(rate);
 
-double rate_aux=80.0;
+double rate_aux=0.005;
 
     // send a goal to the action
     int i=0;
     while(nh.ok())
     {
+
         ++i;
 
-        double angular_freq=2*M_PI/rate_aux;
+        double angular_freq=2*M_PI*rate_aux;
         double time_instant=(double)i;
         double aux=angular_freq*time_instant;
         std::cout << aux << " "<<cos(aux) <<std::endl;
         move_robot_msgs::GazeGoal goal;
         goal.type=move_robot_msgs::GazeGoal::CARTESIAN;
-        goal.fixation_point.point.x = -0.7;
-        goal.fixation_point.point.y =  0.7*cos(aux);
-        goal.fixation_point.point.z = 0.95;
+        goal.fixation_point.point.x = 0.7*cos(aux);
+        goal.fixation_point.point.y = 0.0;
+        goal.fixation_point.point.z = 2.0;
         goal.fixation_point_error_tolerance = 0.005;
 
         //goal.fixation_point.point.z = 0.5;
 
-        goal.fixation_point.header.frame_id="base_link";
+        goal.fixation_point.header.frame_id="ego_frame";
         goal.fixation_point.header.stamp=ros::Time::now();
 
         ac.sendGoal(goal);

@@ -85,6 +85,7 @@ bool GazeSimulation::moveCartesian()
         }
         catch (tf::TransformException &ex)
         {
+            ROS_WARN("%s",ex.what());
             continue;
         }
         break;
@@ -106,7 +107,7 @@ bool GazeSimulation::moveCartesian()
     {
         try
         {
-            tf_listener->waitForTransform(right_eye_frame, left_eye_frame, ros::Time(0), ros::Duration(10.0) );
+            tf_listener->waitForTransform(right_eye_frame, left_eye_frame, ros::Time(0), ros::Duration(1.0) );
             tf_listener->lookupTransform(right_eye_frame, left_eye_frame, ros::Time(0), transform);
         }
         catch (tf::TransformException &ex)
@@ -223,9 +224,9 @@ void GazeSimulation::analysisCB(const control_msgs::JointControllerState::ConstP
             try
             {
                 ros::Time current_time = ros::Time::now();
-                tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
+                tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(1.0) );
                 tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
-                tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+                tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(1.0) );
                 tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_);
             }
             catch (tf::TransformException &ex)

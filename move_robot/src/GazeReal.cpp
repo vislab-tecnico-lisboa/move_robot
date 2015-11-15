@@ -97,6 +97,7 @@ bool GazeReal::moveCartesian()
         }
         catch (tf::TransformException &ex)
         {
+            ROS_WARN("%s",ex.what());
             continue;
         }
         break;
@@ -141,6 +142,7 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
             }
             catch (tf::TransformException &ex)
             {
+                ROS_WARN("%s",ex.what());
                 continue;
             }
             break;
@@ -178,6 +180,7 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
             }
             catch (tf::TransformException &ex)
             {
+                ROS_WARN("%s",ex.what());
                 continue;
             }
             break;

@@ -11,7 +11,7 @@
   <group if="$(arg simulation)">
     <node name="gaze" pkg="move_robot" type="gaze_sim" respawn="false" output="screen">
       <rosparam command="load" file="$(find vizzy_moveit_config)/config/kinematics.yaml"/>
-      <rosparam command="load" file="$(find foveated_stereo_ros)/config/frames.yaml"/>
+      <rosparam command="load" file="$(arg config_file)"/>
     </node>
     <node name="gaze_status" pkg="move_robot" type="fixation_point_node" respawn="true" output="screen" >
       <rosparam file="$(arg config_file)" command="load" />
