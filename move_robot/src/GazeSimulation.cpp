@@ -152,6 +152,14 @@ bool GazeSimulation::moveCartesian()
         vergence_angle.data=M_PI-2.0*atan2(fixation_point.norm()*cos(asin(y_offset/fixation_point.norm()))+z_offset,half_base_line);
     }
 
+    oculocephalic_joint_values[0] = neck_pan_angle.data;
+    oculocephalic_joint_values[1] = neck_tilt_angle.data;
+
+    if(!oculocephalic_group->setJointValueTarget(oculocephalic_joint_values))
+    {
+        ROS_ERROR_STREAM("POSICAO IMPOSSIVEL!");
+        return false;
+    }
 
     neck_pan_pub.publish(neck_pan_angle);
     neck_tilt_pub.publish(neck_tilt_angle);
@@ -231,6 +239,7 @@ void GazeSimulation::analysisCB(const control_msgs::JointControllerState::ConstP
             }
             catch (tf::TransformException &ex)
             {
+                ROS_WARN("%s",ex.what());
                 continue;
             }
             break;

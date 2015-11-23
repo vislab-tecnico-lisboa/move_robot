@@ -17,7 +17,7 @@ int main (int argc, char **argv)
     double rate=10.0;
     ros::Rate r(rate);
 
-double rate_aux=0.005;
+    double rate_aux=0.005;
 
     // send a goal to the action
     int i=0;

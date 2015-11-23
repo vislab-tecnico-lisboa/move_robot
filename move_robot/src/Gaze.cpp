@@ -8,8 +8,13 @@ Gaze::Gaze(const std::string & name) :
     action_name_(name),
     tf_listener(new tf::TransformListener(ros::Duration(40.0))),
     last_fixation_point(Eigen::Vector3d::Constant(std::numeric_limits<double>::max())),
+    oculocephalic_group(new moveit::planning_interface::MoveGroup("oculocephalic")),
     active(false)
 {
+    oculocephalic_joint_names=oculocephalic_group->getActiveJoints();
+    oculocephalic_joint_values.resize(oculocephalic_joint_names.size());
+    std::fill(oculocephalic_joint_values.begin(), oculocephalic_joint_values.end(), 0);
+
     fixation_point_goal_viz_pub = nh_.advertise<geometry_msgs::PointStamped>("fixation_point_goal_viz", 1);
 }
 
@@ -27,6 +32,7 @@ void Gaze::publishFixationPointGoal()
         }
         catch (tf::TransformException &ex)
         {
+            ROS_WARN("%s",ex.what());
             continue;
         }
         break;
@@ -41,6 +47,8 @@ void Gaze::preemptCB()
     ROS_INFO("%s: Preempted", action_name_.c_str());
     // set the action state to preempted
     as_.setPreempted();
+    active=false;
+
 }
 
 void Gaze::goalCB()

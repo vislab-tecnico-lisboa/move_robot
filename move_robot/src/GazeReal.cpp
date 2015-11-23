@@ -79,11 +79,7 @@ bool GazeReal::moveCartesian()
 {
     //One day we will probably control each joint value here. But now we will just leave the fixation point for the ros-yarp bridge
     //to process
-
-
     geometry_msgs::PointStamped goal_point;
-
-
 
     //Ros-yarp bridge receives the point in the waist frame, right? Let's get it in that frame doing another copy/paste from Rui's code
 
@@ -103,6 +99,7 @@ bool GazeReal::moveCartesian()
         break;
     }
 
+    // TODO CHECK LIMITS USING MOVEIT!!!!
 
     //Convert it to point, since ros-yarp wont receive a pointStamped
     geometry_msgs::Point goalToRobot;
@@ -125,7 +122,6 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
     // Convert points to world frame
     geometry_msgs::PointStamped fixation_point_;
     geometry_msgs::PointStamped goal_point_;
-
 
     // Move home check joint state
     if(goal_msg->type==move_robot_msgs::GazeGoal::HOME)
@@ -214,9 +210,6 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
        }*/
     }
     as_.publishFeedback(feedback_);
-
-
-
 }
 
 
