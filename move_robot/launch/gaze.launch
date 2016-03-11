@@ -19,9 +19,9 @@
   </group>
 
   <group unless="$(arg simulation)">
-    <node name="gaze" pkg="move_robot" type="gaze_real" respawn="false" output="screen">
+    <node name="gaze" pkg="move_robot" type="gaze_real" respawn="false" output="log">
       <rosparam command="load" file="$(find vizzy_moveit_config)/config/kinematics.yaml"/>
-      <rosparam command="load" file="$(find foveated_stereo_ros)/config/frames.yaml"/>
+      <rosparam command="load" file="$(arg config_file)"/>
       <remap from="fixation_point_in" to="$(arg fixation_point_in)"/>
       <remap from="fixation_point_out" to="$(arg fixation_point_out)"/>
     </node>    
