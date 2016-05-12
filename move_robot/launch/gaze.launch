@@ -3,7 +3,7 @@
 <!-- Now with the ability to perform gazing in the real one -->
 <launch>
   <arg name="config_file" default="$(find move_robot)/config/frames.yaml" />
-  <arg name="simulation" default="false" />
+  <arg name="simulation" default="true" />
   <arg name="fixation_point_in" default="fixation_point" /> 
   <arg name="fixation_point_out" default="fixation_point_goal_ros"/>
 
@@ -12,7 +12,7 @@
       <rosparam command="load" file="$(find vizzy_moveit_config)/config/kinematics.yaml"/>
       <rosparam command="load" file="$(arg config_file)"/>
     </node>
-    <node name="gaze_status" pkg="move_robot" type="fixation_point_node" respawn="true" output="screen" >
+    <node name="gaze_status" pkg="move_robot" type="fixation_point_node" respawn="false" output="screen" >
       <rosparam file="$(arg config_file)" command="load" />
     </node>
   </group>

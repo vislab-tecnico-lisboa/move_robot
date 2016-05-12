@@ -70,7 +70,6 @@ bool GazeReal::moveCartesian()
         }
         catch (tf::TransformException &ex)
         {
-		ROS_INFO("OLA");
             ROS_WARN("%s",ex.what());
             continue;
         }
