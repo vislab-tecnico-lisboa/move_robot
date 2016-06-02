@@ -4,6 +4,7 @@
 #ifndef GAZE_H
 #define GAZE_H
 // MoveIt!
+#include <sensor_msgs/JointState.h>
 #include <moveit_msgs/GetPositionIK.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/robot_state/robot_state.h>
@@ -76,14 +77,9 @@ protected:
     move_robot_msgs::GazeFeedback feedback_;
     move_robot_msgs::GazeResult result_;
 
-    typedef message_filters::sync_policies::ApproximateTime<control_msgs::JointControllerState, control_msgs::JointControllerState,control_msgs::JointControllerState,control_msgs::JointControllerState,control_msgs::JointControllerState, geometry_msgs::PointStamped> MySyncPolicy;
-    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > neck_pan_sub;
-    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > neck_tilt_sub;
-    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > eyes_tilt_sub;
-    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > version_sub;
-    boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > vergence_sub;
+
     boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > fixation_point_sub;
-    boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> >sync;
+    boost::shared_ptr<message_filters::Subscriber<sensor_msgs::JointState> > joint_state_sub;
 
     // Publishers
     ros::Publisher neck_pan_pub;
@@ -105,12 +101,13 @@ public:
     double half_base_line;
     Gaze(const std::string & name);
     void preemptCB();
-    void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
+    /*virtual void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
                     const control_msgs::JointControllerState::ConstPtr & neck_tilt_msg,
                     const control_msgs::JointControllerState::ConstPtr & eyes_tilt_msg,
                     const control_msgs::JointControllerState::ConstPtr & version_msg,
                     const control_msgs::JointControllerState::ConstPtr & vergence_msg,
                     const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg);
+                    */
     void goalCB();
 };
 
