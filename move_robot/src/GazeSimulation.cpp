@@ -55,15 +55,18 @@ GazeSimulation::GazeSimulation(const std::string & name) : Gaze(name)
     eyes_tilt_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/eyes_tilt_position_controller/state", 10));
     version_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/version_position_controller/state", 10));
     vergence_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/vergence_position_controller/state", 10));
+    joint_state_sub=boost::shared_ptr<message_filters::Subscriber<sensor_msgs::JointState> > (new message_filters::Subscriber<sensor_msgs::JointState>(nh_, "/vizzy/joint_states", 10));
     fixation_point_sub=boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > (new message_filters::Subscriber<geometry_msgs::PointStamped>(nh_, "fixation_point", 10));
+
     sync=boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> > (new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10),
                                                                                                                           *neck_pan_sub,
                                                                                                                           *neck_tilt_sub,
                                                                                                                           *eyes_tilt_sub,
                                                                                                                           *version_sub,
                                                                                                                           *vergence_sub,
+                                                                                                                          *joint_state_sub,
                                                                                                                           *fixation_point_sub));
-    sync->registerCallback(boost::bind(&GazeSimulation::analysisCB, this, _1, _2, _3, _4, _5, _6));
+    sync->registerCallback(boost::bind(&GazeSimulation::analysisCB, this, _1, _2, _3, _4, _5, _6, _7));
 
     as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
     as_.registerPreemptCallback(boost::bind(&Gaze::preemptCB, this));
@@ -97,6 +100,9 @@ bool GazeSimulation::moveCartesian()
     std_msgs::Float64 eyes_tilt_angle;
     std_msgs::Float64 vergence_angle;
     std_msgs::Float64 version_angle;
+
+    std_msgs::Float64 l_eye_angle;
+    std_msgs::Float64 r_eye_angle;
 
     eyes_tilt_angle.data=0.0;
     version_angle.data=0.0;
@@ -161,6 +167,10 @@ bool GazeSimulation::moveCartesian()
         return false;
     }
 
+    l_eye_angle.data=version_angle.data+vergence_angle.data*0.5;
+    r_eye_angle.data=version_angle.data-vergence_angle.data*0.5;
+
+    // Send to l_eye and r_eye angles instead of vergence and version
     neck_pan_pub.publish(neck_pan_angle);
     neck_tilt_pub.publish(neck_tilt_angle);
     eyes_tilt_pub.publish(eyes_tilt_angle);
@@ -197,6 +207,7 @@ void GazeSimulation::analysisCB(const control_msgs::JointControllerState::ConstP
                                 const control_msgs::JointControllerState::ConstPtr & eyes_tilt_msg,
                                 const control_msgs::JointControllerState::ConstPtr & version_msg,
                                 const control_msgs::JointControllerState::ConstPtr & vergence_msg,
+                                const sensor_msgs::JointState::ConstPtr & joint_state_msg,
                                 const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg)
 {
     if(!active)
@@ -224,7 +235,7 @@ void GazeSimulation::analysisCB(const control_msgs::JointControllerState::ConstP
             active=false;
         }
     }
-    else
+    else if(goal_msg->type==move_robot_msgs::GazeGoal::FIXATION_POINT)
     {
 
         while(nh_.ok())
@@ -272,6 +283,59 @@ void GazeSimulation::analysisCB(const control_msgs::JointControllerState::ConstP
         ROS_INFO("%s: Active", action_name_.c_str());
     }*/
     }
+    else if(goal_msg->type==move_robot_msgs::GazeGoal::JOINT_VELOCITIES)
+    {
+
+
+        while(nh_.ok())
+        {
+            try
+            {
+                ros::Time current_time = ros::Time::now();
+                tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(1.0) );
+                tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
+                tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(1.0) );
+                tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_);
+            }
+            catch (tf::TransformException &ex)
+            {
+                ROS_WARN("%s",ex.what());
+                continue;
+            }
+            break;
+        }
+
+        double error_x=fixation_point_.point.x-goal_point_.point.x;
+        double error_y=fixation_point_.point.y-goal_point_.point.y;
+        double error_z=fixation_point_.point.z-goal_point_.point.z;
+        double error=sqrt(error_x*error_x+error_y*error_y+error_z*error_z);
+        feedback_.state_reached=false;
+        feedback_.fixation_point=fixation_point_;
+        feedback_.fixation_point_error=error;
+        feedback_.joint_states=*joint_state_msg;
+
+        // EYE INDEX
+        int index=0;
+
+        // FOR NOW LETS CHOOSE ONLY ONE OF THE EYES (LEFT)
+        if(fabs(joint_state_msg->velocity[index])<fabs(goal_msg->suppression_velocity))
+        {
+            // // AQUI SE CALHAR DEVIA HAVER CONDIÇÂO INICIAL outro if
+            result_.state_reached=true;
+            result_.fixation_point=fixation_point_;
+            result_.fixation_point_error=error;
+            result_.joint_states=*joint_state_msg;
+            feedback_.state_reached=true;
+
+            ROS_INFO("%s: Succeeded", action_name_.c_str());
+            as_.setSucceeded(result_);
+
+            ros::WallTime total_time = ros::WallTime::now();
+            ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
+            active=false;
+        }
+    }
+
     as_.publishFeedback(feedback_);
 }
 

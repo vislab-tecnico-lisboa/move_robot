@@ -2,18 +2,17 @@
 <!-- ROS head file to simulate vizzy in gazebo -->
 <!-- Now with the ability to perform gazing in the real one -->
 <launch>
-  <arg name="config_file" default="file" />
+  <arg name="config_file" default="$(find move_robot)/config/frames.yaml" />
   <arg name="simulation" default="true" />
-  <arg name="fixation_point_in" default="/gaze_point" /> <!-- This is the value we get from the robot --> <!--I'M NOT SURE IF THIS IS THE TOPIC! -->
-  <arg name="fixation_point_out" default=""/> <!-- This is the goal we send to the robot --> <!-- SAME HERE! -->
-  
+  <arg name="fixation_point_in" default="fixation_point" /> 
+  <arg name="fixation_point_out" default="fixation_point_goal_ros"/>
 
   <group if="$(arg simulation)">
     <node name="gaze" pkg="move_robot" type="gaze_sim" respawn="false" output="screen">
       <rosparam command="load" file="$(find vizzy_moveit_config)/config/kinematics.yaml"/>
       <rosparam command="load" file="$(arg config_file)"/>
     </node>
-    <node name="gaze_status" pkg="move_robot" type="fixation_point_node" respawn="true" output="screen" >
+    <node name="gaze_status" pkg="move_robot" type="fixation_point_node" respawn="false" output="screen" >
       <rosparam file="$(arg config_file)" command="load" />
     </node>
   </group>
@@ -21,7 +20,7 @@
   <group unless="$(arg simulation)">
     <node name="gaze" pkg="move_robot" type="gaze_real" respawn="false" output="screen">
       <rosparam command="load" file="$(find vizzy_moveit_config)/config/kinematics.yaml"/>
-      <rosparam command="load" file="$(find foveated_stereo_ros)/config/frames.yaml"/>
+      <rosparam command="load" file="$(arg config_file)"/>
       <remap from="fixation_point_in" to="$(arg fixation_point_in)"/>
       <remap from="fixation_point_out" to="$(arg fixation_point_out)"/>
     </node>    

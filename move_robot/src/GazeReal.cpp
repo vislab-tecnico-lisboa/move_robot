@@ -14,34 +14,7 @@ GazeReal::GazeReal(const std::string & name) : Gaze(name)
 
     //Publishers
     gazePublisher = nh_.advertise<geometry_msgs::Point>("fixation_point_out", 1);
-
-    // Subscribers
-    /* How do we read joint values on the real one? For now let's leave this commented. Rui and Plinio will teach me how to do this
-     *
-    neck_pan_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/neck_pan_position_controller/state", 10));
-    neck_tilt_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/neck_tilt_position_controller/state", 10));
-    eyes_tilt_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/eyes_tilt_position_controller/state", 10));
-    version_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/version_position_controller/state", 10));
-    vergence_sub=boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > (new message_filters::Subscriber<control_msgs::JointControllerState>(nh_, "/vizzy/vergence_position_controller/state", 10));
-    */
-
-    /*     fixation_point_sub=boost::shared_ptr<message_filters::Subscriber<geometry_msgs::PointStamped> > (new message_filters::Subscriber<geometry_msgs::PointStamped>(nh_, "fixation_point", 10));
-
-     //We will want to read joint states, so this remains here commented
-    sync=boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> > (new message_filters::Synchronizer<MySyncPolicy>(MySyncPolicy(10),
-                                                                                                                          *neck_pan_sub,
-                                                                                                                          *neck_tilt_sub,
-                                                                                                                          *eyes_tilt_sub,
-                                                                                                                          *version_sub,
-                                                                                                                          *vergence_sub,
-                                                                                                                        *fixation_point_sub));
-
-    sync->registerCallback(boost::bind(&GazeReal::analysisCB, this, _1, _2, _3, _4, _5, _6));
-*/
-
-    //For now lets just do it for fixation_point_sub.
-
-    fix_point_sub = nh_.subscribe("fixation_point", 1, &GazeReal::analysisCB, this);
+    fix_point_sub = nh_.subscribe("fixation_point_in", 1, &GazeReal::analysisCB, this);
 
     as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
     as_.registerPreemptCallback(boost::bind(&Gaze::preemptCB, this));
@@ -71,8 +44,12 @@ bool GazeReal::moveHome()
     home_position_fixation_point.point=goalToRobot;
     home_position_fixation_point.header.frame_id=world_frame;
     home_position_fixation_point.header.stamp=ros::Time::now();
+
+    while(nh_.ok()&&gazePublisher.getNumSubscribers()<1);
+
     gazePublisher.publish(goalToRobot);
 
+    return true;
 }
 
 bool GazeReal::moveCartesian()
