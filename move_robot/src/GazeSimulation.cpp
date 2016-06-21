@@ -112,7 +112,7 @@ bool GazeSimulation::moveCartesian()
         }
         catch (tf::TransformException &ex)
         {
-            ROS_WARN("%s",ex.what());
+            ROS_WARN("%s foda-se55",ex.what());
             continue;
         }
         break;

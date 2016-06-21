@@ -46,9 +46,8 @@ void Gaze::preemptCB()
 {
     ROS_INFO("%s: Preempted", action_name_.c_str());
     // set the action state to preempted
-    as_.setPreempted();
     active=false;
-
+    as_.setPreempted();
 }
 
 void Gaze::goalCB()
