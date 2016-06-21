@@ -66,7 +66,7 @@ GazeSimulation::GazeSimulation(const std::string & name) : Gaze(name)
                                                                                                                           *vergence_sub,
                                                                                                                           *joint_state_sub,
                                                                                                                           *fixation_point_sub));
-    //sync->registerCallback(boost::bind(&GazeSimulation::analysisCB, this, _1, _2, _3, _4, _5, _6, _7));
+    sync->registerCallback(boost::bind(&GazeSimulation::analysisCB, this, _1, _2, _3, _4, _5, _6, _7));
 
     as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
     as_.registerPreemptCallback(boost::bind(&Gaze::preemptCB, this));
@@ -100,6 +100,9 @@ bool GazeSimulation::moveCartesian()
     std_msgs::Float64 eyes_tilt_angle;
     std_msgs::Float64 vergence_angle;
     std_msgs::Float64 version_angle;
+
+    std_msgs::Float64 l_eye_angle;
+    std_msgs::Float64 r_eye_angle;
 
     eyes_tilt_angle.data=0.0;
     version_angle.data=0.0;
@@ -164,6 +167,10 @@ bool GazeSimulation::moveCartesian()
         return false;
     }
 
+    l_eye_angle.data=version_angle.data+vergence_angle.data*0.5;
+    r_eye_angle.data=version_angle.data-vergence_angle.data*0.5;
+
+    // Send to l_eye and r_eye angles instead of vergence and version
     neck_pan_pub.publish(neck_pan_angle);
     neck_tilt_pub.publish(neck_tilt_angle);
     eyes_tilt_pub.publish(eyes_tilt_angle);
