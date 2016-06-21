@@ -14,8 +14,8 @@ GazeSimulation::GazeSimulation(const std::string & name) : Gaze(name)
     neck_pan_pub= nh_.advertise<std_msgs::Float64>("/vizzy/neck_pan_position_controller/command", 1);
     neck_tilt_pub=nh_.advertise<std_msgs::Float64>("/vizzy/neck_tilt_position_controller/command", 1);
     eyes_tilt_pub=nh_.advertise<std_msgs::Float64>("/vizzy/eyes_tilt_position_controller/command", 1);
-    version_pub=  nh_.advertise<std_msgs::Float64>("/vizzy/version_position_controller/command", 1);
-    vergence_pub= nh_.advertise<std_msgs::Float64>("/vizzy/vergence_position_controller/command", 1);
+    l_eye_pub=  nh_.advertise<std_msgs::Float64>("/vizzy/l_eye_position_controller/command", 1);
+    r_eye_pub= nh_.advertise<std_msgs::Float64>("/vizzy/r_eye_position_controller/command", 1);
 
     ROS_INFO("Going to move head and eyes to home position.");
     moveHome();
@@ -174,8 +174,8 @@ bool GazeSimulation::moveCartesian()
     neck_pan_pub.publish(neck_pan_angle);
     neck_tilt_pub.publish(neck_tilt_angle);
     eyes_tilt_pub.publish(eyes_tilt_angle);
-    vergence_pub.publish(vergence_angle);
-    version_pub.publish(version_angle);
+    l_eye_pub.publish(l_eye_angle);
+    r_eye_pub.publish(r_eye_angle);
 
     return true;
 
@@ -188,18 +188,18 @@ bool GazeSimulation::moveHome()
     std_msgs::Float64 neck_pan_angle;
     std_msgs::Float64 neck_tilt_angle;
     std_msgs::Float64 eyes_tilt_angle;
-    std_msgs::Float64 vergence_angle;
-    std_msgs::Float64 version_angle;
+    std_msgs::Float64 l_eye_angle;
+    std_msgs::Float64 r_eye_angle;
     neck_pan_angle.data=0.0;
     neck_tilt_angle.data=0.0;
     eyes_tilt_angle.data=0.0;
-    vergence_angle.data=0.0;
-    version_angle.data=0.0;
+    l_eye_angle.data=0.0;
+    r_eye_angle.data=0.0;
     neck_pan_pub.publish(neck_pan_angle);
     neck_tilt_pub.publish(neck_tilt_angle);
     eyes_tilt_pub.publish(eyes_tilt_angle);
-    vergence_pub.publish(vergence_angle);
-    version_pub.publish(version_angle);
+    l_eye_pub.publish(l_eye_angle);
+    r_eye_pub.publish(r_eye_angle);
 }
 
 void GazeSimulation::analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,

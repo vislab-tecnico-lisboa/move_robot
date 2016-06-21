@@ -85,8 +85,8 @@ protected:
     ros::Publisher neck_pan_pub;
     ros::Publisher neck_tilt_pub;
     ros::Publisher eyes_tilt_pub;
-    ros::Publisher version_pub;
-    ros::Publisher vergence_pub;
+    ros::Publisher l_eye_pub;
+    ros::Publisher r_eye_pub;
     ros::Publisher fixation_point_goal_viz_pub;
     void publishFixationPointGoal();
 
