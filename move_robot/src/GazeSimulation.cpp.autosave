@@ -67,8 +67,10 @@ GazeSimulation::GazeSimulation(const std::string & name) : Gaze(name)
                                                                                                                           *joint_state_sub,
                                                                                                                           *fixation_point_sub));
     sync->registerCallback(boost::bind(&GazeSimulation::analysisCB, this, _1, _2, _3, _4, _5, _6, _7));
+
     as_.registerGoalCallback(boost::bind(&Gaze::goalCB, this));
     as_.registerPreemptCallback(boost::bind(&Gaze::preemptCB, this));
+
     as_.start();
 }
 
