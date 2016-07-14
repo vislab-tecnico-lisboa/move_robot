@@ -131,7 +131,7 @@ protected:
 
 public:
     double half_base_line;
-    Gaze(const std::string & name);
+    Gaze(const std::string & name, const ros::NodeHandle & nh);
     void preemptCB();
     /*virtual void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
                     const control_msgs::JointControllerState::ConstPtr & neck_tilt_msg,

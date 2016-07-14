@@ -14,7 +14,7 @@ public:
     boost::shared_ptr<message_filters::Subscriber<control_msgs::JointControllerState> > vergence_sub;
     boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> >sync;
 
-    GazeSimulation(const std::string & name);
+    GazeSimulation(const std::string & name, const ros::NodeHandle & nh);
     bool moveHome();
     bool moveCartesian();
     void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,

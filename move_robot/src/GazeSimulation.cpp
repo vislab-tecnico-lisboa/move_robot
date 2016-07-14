@@ -1,8 +1,11 @@
 #include "GazeSimulation.h"
 
-GazeSimulation::GazeSimulation(const std::string & name) : Gaze(name)
+GazeSimulation::GazeSimulation(const std::string & name, const ros::NodeHandle & nh) : Gaze(name,nh)
 {
-
+    while(ros::ok())
+    {
+        ROS_ERROR("TESTE");
+    }
     private_node_handle.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
     private_node_handle.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
     private_node_handle.param<std::string>("neck_frame", neck_frame, "neck_frame");
@@ -22,7 +25,6 @@ GazeSimulation::GazeSimulation(const std::string & name) : Gaze(name)
     sleep(5.0); // THIS SHOULD CHANGE
 
     ROS_INFO("Done.");
-
 
     tf::StampedTransform transform;
 
@@ -276,10 +278,7 @@ void GazeSimulation::analysisCB(const control_msgs::JointControllerState::ConstP
             ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
             active=false;
         }
-        /*else
-    {
-        ROS_INFO("%s: Active", action_name_.c_str());
-    }*/
+
     }
     else if(goal_msg->type==move_robot_msgs::GazeGoal::JOINT_VELOCITIES)
     {
@@ -344,9 +343,12 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "gaze");
     ros::NodeHandle nh_;
+
+
+
+    GazeSimulation gaze(ros::this_node::getName(),nh_);
     ros::AsyncSpinner spinner(4);
     spinner.start();
-    GazeSimulation gaze(ros::this_node::getName());
     ros::waitForShutdown();
     spinner.stop();
     return 0;

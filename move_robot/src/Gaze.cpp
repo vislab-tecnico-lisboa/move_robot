@@ -2,7 +2,8 @@
 
 #include "Gaze.h"
 
-Gaze::Gaze(const std::string & name) :
+Gaze::Gaze(const std::string & name, const ros::NodeHandle & nh) :
+    nh_(nh),
     as_(nh_, name, false),
     private_node_handle("~"),
     action_name_(name),
@@ -13,6 +14,10 @@ Gaze::Gaze(const std::string & name) :
     it(private_node_handle),
     first_suppresion(true)
 {
+    while(ros::ok())
+    {
+        ROS_ERROR("FODAAAAAAAAAAAAAAAAAAAA-SE");
+    }
     oculocephalic_joint_names=oculocephalic_group->getActiveJoints();
     oculocephalic_joint_values.resize(oculocephalic_joint_names.size());
     std::fill(oculocephalic_joint_values.begin(), oculocephalic_joint_values.end(), 0);

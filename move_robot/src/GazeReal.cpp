@@ -1,8 +1,7 @@
 #include "GazeReal.h"
 
-GazeReal::GazeReal(const std::string & name) : Gaze(name)
+GazeReal::GazeReal(const std::string & name, const ros::NodeHandle & nh) : Gaze(name,nh)
 {
-
     private_node_handle.param<std::string>("left_eye_frame", left_eye_frame, "left_eye_frame");
     private_node_handle.param<std::string>("right_eye_frame", right_eye_frame, "right_eye_frame");
     private_node_handle.param<std::string>("neck_frame", neck_frame, "neck_frame");
@@ -10,7 +9,6 @@ GazeReal::GazeReal(const std::string & name) : Gaze(name)
     private_node_handle.param<std::string>("eyes_center_frame", eyes_center_frame, "eyes_center_frame");
     private_node_handle.param<std::string>("world_frame", world_frame, "world_frame");
     private_node_handle.param<std::string>("fixation_point_frame", fixation_point_frame, "fixation_point_frame");
-
 
     //Publishers
     gazePublisher = nh_.advertise<geometry_msgs::Point>("fixation_point_out", 1);
@@ -23,7 +21,6 @@ GazeReal::GazeReal(const std::string & name) : Gaze(name)
 
     ROS_INFO("Going to move head and eyes to home position.");
     moveHome();
-
 }
 
 
@@ -56,24 +53,20 @@ bool GazeReal::moveCartesian()
 {
     //One day we will probably control each joint value here. But now we will just leave the fixation point for the ros-yarp bridge
     //to process
+
     geometry_msgs::PointStamped goal_point;
 
     //Ros-yarp bridge receives the point in the waist frame, right? Let's get it in that frame doing another copy/paste from Rui's code
-
-    while(nh_.ok())
+    try
     {
-        try
-        {
-            ros::Time current_time = ros::Time::now();
-            tf_listener->waitForTransform(fixation_point_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-            tf_listener->transformPoint(fixation_point_frame, current_time, goal_msg->fixation_point, world_frame, goal_point);
-        }
-        catch (tf::TransformException &ex)
-        {
-            ROS_WARN("%s",ex.what());
-            continue;
-        }
-        break;
+        ros::Time current_time = ros::Time::now();
+        tf_listener->waitForTransform(fixation_point_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+        tf_listener->transformPoint(fixation_point_frame, current_time, goal_msg->fixation_point, world_frame, goal_point);
+    }
+    catch (tf::TransformException &ex)
+    {
+        ROS_WARN("%s",ex.what());
+        return false;
     }
 
     // TODO CHECK LIMITS USING MOVEIT!!!!
@@ -103,22 +96,19 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
     // Move home check joint state
     if(goal_msg->type==move_robot_msgs::GazeGoal::HOME)
     {
-        while(nh_.ok())
+
+        try
         {
-            try
-            {
-                ros::Time current_time = ros::Time::now();
-                tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
-                tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
-                tf_listener->waitForTransform(world_frame, current_time, home_position_fixation_point.header.frame_id, home_position_fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-                tf_listener->transformPoint(world_frame, current_time, home_position_fixation_point, world_frame, goal_point_);
-            }
-            catch (tf::TransformException &ex)
-            {
-                ROS_WARN("%s",ex.what());
-                continue;
-            }
-            break;
+            ros::Time current_time = ros::Time::now();
+            tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
+            tf_listener->waitForTransform(world_frame, current_time, home_position_fixation_point.header.frame_id, home_position_fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, home_position_fixation_point, world_frame, goal_point_);
+        }
+        catch (tf::TransformException &ex)
+        {
+            ROS_WARN("%s",ex.what());
+            return;
         }
 
         double error_x=fixation_point_.point.x-goal_point_.point.x;
@@ -140,24 +130,20 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
     }
     else
     {
-
-        while(nh_.ok())
+        try
         {
-            try
-            {
-                ros::Time current_time = ros::Time::now();
-                tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
-                tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
-                tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
-                tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_);
-            }
-            catch (tf::TransformException &ex)
-            {
-                ROS_WARN("%s",ex.what());
-                continue;
-            }
-            break;
+            ros::Time current_time = ros::Time::now();
+            tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
+            tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_);
         }
+        catch (tf::TransformException &ex)
+        {
+            ROS_WARN("%s",ex.what());
+            return;
+        }
+
 
         double error_x=fixation_point_.point.x-goal_point_.point.x;
         double error_y=fixation_point_.point.y-goal_point_.point.y;
@@ -196,7 +182,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh_;
     ros::AsyncSpinner spinner(4);
     spinner.start();
-    GazeReal gaze(ros::this_node::getName());
+    GazeReal gaze(ros::this_node::getName(),nh_);
     ros::waitForShutdown();
     spinner.stop();
     return 0;
