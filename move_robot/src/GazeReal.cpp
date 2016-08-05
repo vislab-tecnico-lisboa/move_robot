@@ -115,9 +115,11 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
         double error_y=fixation_point_.point.y-goal_point_.point.y;
         double error_z=fixation_point_.point.z-goal_point_.point.z;
         double error=sqrt(error_x*error_x+error_y*error_y+error_z*error_z);
+        feedback_.state_reached=false;
+        feedback_.fixation_point=fixation_point_;
+        feedback_.fixation_point_error=error;
 
-
-        if(error < 0.001)
+        if(error < goal_msg->fixation_point_error_tolerance)
         {
             feedback_.state_reached=true;
             ROS_INFO("%s: Succeeded", action_name_.c_str());
@@ -133,9 +135,9 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
         try
         {
             ros::Time current_time = ros::Time::now();
-            tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->waitForTransform(world_frame, current_time, fixation_point_msg->header.frame_id, fixation_point_msg->header.stamp, world_frame, ros::Duration(1.0) );
             tf_listener->transformPoint(world_frame, current_time, *fixation_point_msg, world_frame, fixation_point_);
-            tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(10.0) );
+            tf_listener->waitForTransform(world_frame, current_time, goal_msg->fixation_point.header.frame_id, goal_msg->fixation_point.header.stamp, world_frame, ros::Duration(1.0) );
             tf_listener->transformPoint(world_frame, current_time, goal_msg->fixation_point, world_frame, goal_point_);
         }
         catch (tf::TransformException &ex)
@@ -156,8 +158,6 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
         if(error<goal_msg->fixation_point_error_tolerance)
         {
             result_.state_reached=true;
-            result_.fixation_point=fixation_point_;
-            result_.fixation_point_error=error;
             feedback_.state_reached=true;
 
             ROS_INFO("%s: Succeeded", action_name_.c_str());
@@ -167,11 +167,8 @@ void GazeReal::analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_
             ROS_INFO_STREAM(action_name_.c_str()<<": Total time: " <<  (total_time - start_time).toSec());
             active=false;
         }
-        /*else
-       {
-           ROS_INFO("%s: Active", action_name_.c_str());
-       }*/
     }
+
     as_.publishFeedback(feedback_);
 }
 
