@@ -11,7 +11,7 @@ protected:
     std::string fixation_point_frame;
     geometry_msgs::PointStamped home_position_fixation_point;
 public:
-    GazeReal(const std::string & name);
+    GazeReal(const std::string & name, const ros::NodeHandle & nh);
     bool moveHome();
     bool moveCartesian();
     void analysisCB(const geometry_msgs::PointStamped::ConstPtr& fixation_point_msg);

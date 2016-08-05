@@ -12,7 +12,7 @@ uint8 mode  # ONLY CARTESIAN IS IMPLEMENTED
 geometry_msgs/PointStamped fixation_point
 
 float64 fixation_point_error_tolerance  # max allowed error in meters
-float64 suppression_velocity # max allowed velocity in radians
+#float64 suppression_velocity # max allowed velocity in radians
 ---
 #result definition
 bool state_reached

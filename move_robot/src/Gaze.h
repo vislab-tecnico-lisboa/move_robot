@@ -50,20 +50,19 @@ class Gaze
     // Saccadic stuff
     //Sync
     image_transport::ImageTransport it;
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::JointState> MySyncPolicy;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySuppressionSyncPolicy;
 
     boost::shared_ptr<message_filters::Subscriber<sensor_msgs::Image> > left_image_sub;
     boost::shared_ptr<message_filters::Subscriber<sensor_msgs::Image> > right_image_sub;
 
-    boost::shared_ptr<message_filters::Synchronizer<MySyncPolicy> > gaze_sync;
+    boost::shared_ptr<message_filters::Synchronizer<MySuppressionSyncPolicy> > gaze_sync;
 
     //Message filter to sync tfs with image
     boost::shared_ptr<tf::MessageFilter<sensor_msgs::Image> > left_image_filter;
     boost::shared_ptr<tf::MessageFilter<sensor_msgs::Image> > right_image_filter;
 
     void suppresion(const sensor_msgs::Image::ConstPtr & left_image_msg,
-                    const sensor_msgs::Image::ConstPtr & right_image_msg,
-                    const sensor_msgs::JointState::ConstPtr & joint_state_msg);
+                    const sensor_msgs::Image::ConstPtr & right_image_msg);
 
     bool first_suppresion;
     ros::Publisher left_image_suppression_pub;
@@ -75,7 +74,6 @@ class Gaze
     std::map<std::string, int> joints_to_indices;
 
 protected:
-    boost::shared_ptr<message_filters::Subscriber<sensor_msgs::JointState> > joint_state_sub;
 
     bool active;
     double y_offset;
@@ -118,8 +116,6 @@ protected:
     ros::Publisher r_eye_pub;
     ros::Publisher fixation_point_goal_viz_pub;
 
-
-
     void publishFixationPointGoal();
 
     virtual bool moveHome() = 0;
@@ -131,7 +127,7 @@ protected:
 
 public:
     double half_base_line;
-    Gaze(const std::string & name);
+    Gaze(const std::string & name, const ros::NodeHandle & nh);
     void preemptCB();
     /*virtual void analysisCB(const control_msgs::JointControllerState::ConstPtr & neck_pan_msg,
                     const control_msgs::JointControllerState::ConstPtr & neck_tilt_msg,

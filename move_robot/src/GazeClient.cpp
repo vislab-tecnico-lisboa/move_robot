@@ -46,6 +46,7 @@ int main (int argc, char **argv)
     goal.fixation_point.point.x = 2;
     goal.fixation_point.point.y = 0;
     goal.fixation_point.point.z = 1;
+    goal.fixation_point_error_tolerance = 0.2;
 
     while(nh.ok())
     {

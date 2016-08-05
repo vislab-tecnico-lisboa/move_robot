@@ -37,19 +37,19 @@ FixationPointRos::FixationPointRos(const ros::NodeHandle & nh_,const ros::NodeHa
 
 void FixationPointRos::jointStateCallback(const sensor_msgs::JointState::ConstPtr& joint_states_msg)
 {
-    double vergence_angle;
-    double version_angle;
+    double left_eye_angle;
+    double right_eye_angle;
     double eyes_tilt_angle;
 
     for(int i=0; i<joint_states_msg->name.size(); ++i)
     {
-        if(joint_states_msg->name[i]==std::string("vergence_joint"))
+        if(joint_states_msg->name[i]==std::string("l_eye_joint"))
         {
-            vergence_angle=(double)joint_states_msg->position[i];
+            left_eye_angle=(double)joint_states_msg->position[i];
         }
-        else if(joint_states_msg->name[i]==std::string("version_joint"))
+        else if(joint_states_msg->name[i]==std::string("r_eye_joint"))
         {
-            version_angle=(double)joint_states_msg->position[i];
+            right_eye_angle=(double)joint_states_msg->position[i];
         }
         else if(joint_states_msg->name[i]==std::string("eyes_tilt_joint"))
         {
@@ -76,10 +76,7 @@ void FixationPointRos::jointStateCallback(const sensor_msgs::JointState::ConstPt
     tf::Vector3 origin=transform.getOrigin();
     base_line=(double)origin.length(); // meters
 
-    //ROS_INFO_STREAM("vergence joint:"<< vergence_angle << " version joint:" <<version_angle<< " eyes tilt joint:" <<eyes_tilt_angle);
 
-    double left_eye_angle=version_angle+vergence_angle*0.5;
-    double right_eye_angle=version_angle-vergence_angle*0.5;
 
     Eigen::Vector3d fixation_point_eigen=fixation_point->getFixationPoint(left_eye_angle,
                                                                           right_eye_angle,
